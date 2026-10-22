@@ -22,6 +22,7 @@ const server=spawn(process.execPath,['scripts/demo.mjs'],{cwd:root,stdio:'ignore
 const base='http://127.0.0.1:8765';
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 for(let n=0;n<50;n++){try{if((await fetch(base)).ok)break;}catch{}await wait(100);}
+for(const resource of ['/demo.js','/demo.css','/expired.html'])assert.equal((await fetch(base+resource)).status,200,'Synthetic demo resources must load');
 let context;
 const opts={headless:true,channel:'chromium',args:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`],viewport:{width:1280,height:800}};
 if(process.env.CHROMIUM_PATH)opts.executablePath=process.env.CHROMIUM_PATH;
@@ -114,4 +115,9 @@ try {
   await api(ui,'DISABLE',{origin:base,erase:true});assert(!(await api(ui,'STATE')).drafts.some(d=>d.origin===base));
   await api(ui,'CLEAR');state=await api(ui,'STATE');assert.equal(state.library.length+state.drafts.length+state.sites.length,0);check('site erasure and all-data deletion');
   await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({browser:context.browser()?.version(),automated:report,permissionPrompt:'not automated; temporary loopback host pre-grant',syntheticOnly:true},null,2)).catch(async()=>{await mkdir(path.join(root,'test-results'),{recursive:true});await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({automated:report,syntheticOnly:true},null,2));});
-} finally {await context?.close();server.kill();await rm(temp,{recursive:true,force:true});}
+} finally {
+  await context?.close();server.kill();
+  assert.equal(path.dirname(path.resolve(temp)),path.resolve(tmpdir()));
+  assert(path.basename(temp).startsWith('draft-cairn-test-'));
+  await rm(temp,{recursive:true,force:true});
+}

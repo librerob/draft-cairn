@@ -2,7 +2,7 @@ import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-const root=fileURLToPath(new URL('../demo/',import.meta.url));
+const root=path.resolve(fileURLToPath(new URL('../demo/',import.meta.url)));
 const port=Number(process.env.PORT || 8765);
 const server=http.createServer(async(req,res)=>{
   const name=new URL(req.url,'http://localhost').pathname;
