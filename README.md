@@ -2,7 +2,21 @@
 
 Local answer recovery for long web applications. A free, MIT-licensed Chrome extension for grant writers, consultants, and agencies working through application portals.
 
-Enable it for a website before writing. Supported fields save locally; the recovery workspace lets you review revisions, copy an answer, or explicitly restore it to a uniquely matched empty field. An answer library keeps reusable text you choose to save. Oversized pastes open a larger editor before HTML `maxlength` can truncate them.
+Draft Cairn keeps a local safety copy of supported answers on websites you choose.
+
+## Imagine this
+
+1. You're filling in a website's big answer box, perhaps explaining a project in a grant application.
+2. You spend half an hour writing.
+3. The website reloads or logs you out. Your answer disappears.
+4. If Draft Cairn was enabled beforehand and finished saving, you open its recovery workspace, preview your saved answer, and copy it back. You can also explicitly restore it when the original field is confidently matched and empty.
+
+Protection must be enabled before the loss. Wait for **saved on this device**; text that has not finished saving may still be lost. Draft Cairn cannot keep you logged in or recover text written before protection was enabled.
+
+Two other everyday uses:
+
+- **An answer that won't fit.** You paste a 600-unit answer into a field with a declared 500-unit limit. Draft Cairn stops the oversized paste and opens the complete original in a larger editor, so you can edit it yourself. It cannot detect every custom website limit.
+- **A paragraph you use again.** You explicitly save an approved project description in the answer library. Next time, search for it and copy it into your application.
 
 This is an early preview. Commercial demand and broad compatibility have not been established. Keep a separate copy of important work.
 

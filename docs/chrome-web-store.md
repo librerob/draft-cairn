@@ -12,6 +12,15 @@ Checked 22 October 2026. No upload, payment, registration, or store submission h
 
 Long applications take concentration. Draft Cairn keeps local recovery copies of supported long-answer fields on the websites you explicitly enable.
 
+Imagine this:
+
+1. You're filling in a website's big answer box, perhaps describing a project in a grant application.
+2. You spend half an hour writing.
+3. The website reloads or logs you out. Your answer disappears.
+4. If Draft Cairn was enabled beforehand and finished saving, you open its recovery workspace and copy your saved answer back.
+
+Enable protection before you start and wait for **saved on this device**. Text that has not finished saving may still be lost. Draft Cairn cannot keep you logged in or recover earlier unprotected text.
+
 Review saved revisions with the page title, site, field label, and saved time. Copy an answer, or explicitly restore it to an empty field when the match is clear. Nothing is restored or submitted automatically.
 
 Before a paste exceeds an HTML field's declared character limit, Draft Cairn stops the paste and opens a larger editor with the complete original and a counter. It does not detect every custom website limit and never rewrites or shortens your answer.
