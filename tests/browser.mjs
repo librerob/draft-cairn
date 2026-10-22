@@ -116,8 +116,9 @@ try {
   assert(!(await api(ui,'STATE')).drafts.some(d=>d.id==='expired-synthetic'));
   await api(ui,'DELETE_DRAFT',{id:ambiguous.id});assert(!(await api(ui,'STATE')).drafts.some(d=>d.id===ambiguous.id));check('expiry and individual draft deletion');
   const durable=(await api(ui,'STATE')).library.length;
+  const durableDraftIds=(await api(ui,'STATE')).drafts.map(d=>d.id).sort();assert(durableDraftIds.length>0);
   await context.close();({worker,id,ui}=await launch());assert.equal((await api(ui,'STATE')).library.length,durable);
-  assert((await api(ui,'STATE')).drafts.some(d=>d.id===draft.id));check('drafts and library survive a real browser process restart');
+  assert.deepEqual((await api(ui,'STATE')).drafts.map(d=>d.id).sort(),durableDraftIds);check('drafts and library survive a real browser process restart');
   const hostile=(await api(ui,'STATE')).library.find(a=>a.project==='Synthetic hostile strings');await api(ui,'DELETE_ANSWER',{id:hostile.id});
   await api(ui,'SAVE_ANSWER',{answer:{title:'Workshop accessibility',project:'Northbank',text:'Synthetic approved wording: our workshop offers step-free access, quiet sessions, and materials in accessible formats.'}});
   await ui.reload();await ui.waitForFunction(()=>document.getElementById('summary').textContent.includes('revisions'));
@@ -128,7 +129,8 @@ try {
   await ui.setViewportSize({width:390,height:844});assert.equal(await ui.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);check('workspace fits a 390px viewport');
   await api(ui,'DISABLE',{origin:base,erase:true});assert(!(await api(ui,'STATE')).drafts.some(d=>d.origin===base));
   await api(ui,'CLEAR');state=await api(ui,'STATE');assert.equal(state.library.length+state.drafts.length+state.sites.length,0);check('site erasure and all-data deletion');
-  await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({browser:context.browser()?.version(),automated:report,permissionPrompt:'not automated; temporary loopback host pre-grant',syntheticOnly:true},null,2)).catch(async()=>{await mkdir(path.join(root,'test-results'),{recursive:true});await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({automated:report,syntheticOnly:true},null,2));});
+  await mkdir(path.join(root,'test-results'),{recursive:true});
+  await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({browser:context.browser()?.version(),automated:report,permissionPrompt:'not automated; temporary loopback host pre-grant; native removal simulated',syntheticOnly:true},null,2));
 } finally {
   await context?.close();server.kill();
   assert.equal(path.dirname(path.resolve(temp)),path.resolve(tmpdir()));
