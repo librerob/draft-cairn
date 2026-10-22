@@ -6,6 +6,8 @@ Enable it for a website before writing. Supported fields save locally; the recov
 
 This is an early preview. Commercial demand and broad compatibility have not been established. Keep a separate copy of important work.
 
+![The answer library with synthetic project answers](docs/images/library.png)
+
 ## Install
 
 1. Download `draft-cairn-0.1.0.zip` from [Releases](https://github.com/librerob/draft-cairn/releases), verify it against `SHA256SUMS`, and extract it.

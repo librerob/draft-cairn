@@ -2,6 +2,10 @@
 
 22 October 2026 · synthetic fixtures only
 
+Verified on commit `370d004dddf9b170a06c1ab44ec26aac92cd1a43`: **8 unit groups and 20 Chromium integration scenarios passed**, including all retained draft IDs and library count surviving a real browser-process restart. Browser: Chromium 151.0.7922.34 on Ubuntu 24.04. [Validation run](https://github.com/librerob/draft-cairn/actions/runs/39828150956) and [gated release run](https://github.com/librerob/draft-cairn/actions/runs/39828270784) both succeeded. The [machine-readable result](validation-results.json) lists the exact scenarios and test-grant limitations.
+
+The Windows and Linux release packages were compared byte for byte. SHA-256: `c84cd3c63a3c8e488c07d1018b2797066fe0d31237638d946ac54861faee6b3a`. The local demo's expiry/return flow was also manually verified in the in-app Chromium browser; this was a demo check, not a local extension installation test.
+
 ## Local checks
 
 Eight Node test groups pass: field exclusion, paste selection/UTF-16 arithmetic, conservative matching, revision/storage bounds, expiry, atomic import validation and hostile strings, and URL-origin handling. Static checks pass for JavaScript syntax, manifest permissions/incognito, runtime paths, safe text rendering, and absence of outbound request APIs. Reproducible packaging is checked by building twice and comparing SHA-256.

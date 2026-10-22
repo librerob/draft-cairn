@@ -1,0 +1,31 @@
+{
+  "browser": "151.0.7922.34",
+  "automated": [
+    "no capture before explicit site enable",
+    "typing saves through the real service worker",
+    "reload and explicit restoration to the original empty field",
+    "nonempty destination is never overwritten",
+    "deliberate session-expiry navigation and return recovery",
+    "similar fields keep separate draft records",
+    "duplicate field identities refuse restoration",
+    "password, card, OTP, ignored and short inputs excluded",
+    "oversized selected-text paste is blocked and full original persisted",
+    "larger editor exposes a labelled dialog and complete original answer to accessibility APIs",
+    "a fitting paste over a selection is allowed",
+    "query and fragment omitted, query-based pages copy only",
+    "hostile library content rendered as literal text",
+    "malformed import is atomic",
+    "storage failure preserves earlier data and shows a visible warning",
+    "turning protection off and on works in an already-open page",
+    "expiry and individual draft deletion",
+    "drafts and library survive a real browser process restart",
+    "workspace fits a 390px viewport",
+    "site erasure and all-data deletion"
+  ],
+  "permissionPrompt": "not automated; temporary loopback host pre-grant; native removal simulated",
+  "syntheticOnly": true,
+  "sourceCommit": "370d004dddf9b170a06c1ab44ec26aac92cd1a43",
+  "validationRun": "https://github.com/librerob/draft-cairn/actions/runs/39828150956",
+  "releaseRun": "https://github.com/librerob/draft-cairn/actions/runs/39828270784",
+  "sha256": "c84cd3c63a3c8e488c07d1018b2797066fe0d31237638d946ac54861faee6b3a"
+}
