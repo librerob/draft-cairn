@@ -69,6 +69,7 @@ document.querySelectorAll('[data-pane]').forEach(button=>button.onclick=()=>{
 $('draft-search').oninput=renderDrafts;$('library-search').oninput=renderLibrary;
 $('refresh').onclick=()=>refresh().catch(e=>notice(e.message,true));
 $('new-answer').onclick=()=>openEditor();$('close-editor').onclick=()=>$('answer-dialog').close();
+$('answer-dialog').addEventListener('close',()=>{$('answer-form').reset();$('editor-error').textContent='';count();});
 $('answer-text').oninput=count;
 $('copy-editor').onclick=async()=>{try{await navigator.clipboard.writeText($('answer-text').value);$('editor-error').textContent='Copied.';}catch{$('answer-text').focus();$('answer-text').select();$('editor-error').textContent='Press Ctrl+C or Command+C to copy the selected answer.';}};
 $('answer-form').onsubmit=async e=>{
@@ -88,4 +89,11 @@ $('import').onchange=async()=>{
   catch(e){notice(e.message,true);}finally{$('import').value='';}
 };
 $('clear').onclick=async()=>{if(!confirm('Permanently delete all extension drafts, library answers, settings, and site permissions?'))return;try{await api('CLEAR');await refresh();notice('All extension data and site access deleted.');}catch(e){notice(e.message,true);}};
+chrome.storage.onChanged.addListener((changes,area)=>{
+  const next=changes.state?.newValue;
+  if(area==='local' && next && !next.sites.length && !next.drafts.length && !next.library.length) {
+    if($('answer-dialog').open)$('answer-dialog').close();
+    refresh().catch(()=>notice('Could not refresh local data.',true));
+  }
+});
 refresh().catch(e=>notice(e.message,true));

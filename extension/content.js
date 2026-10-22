@@ -150,12 +150,5 @@
     })().then(respond,()=>respond({ok:false,error:'Protection is off or the page is unavailable. Copy the answer instead.'}));
     return true;
   });
-  // Permissions can be revoked while a document remains open. Stop pending capture immediately.
-  chrome.storage.onChanged.addListener((changes,area)=>{
-    if (area !== 'local' || !changes.state) return;
-    const next=changes.state.newValue;
-    active=!!next?.sites?.includes(location.origin);
-    if (!active) {pending=null;clearTimeout(timer);host?.remove();}
-  });
   message({type:'HELLO'}).then(()=>{active=true;if(document.documentElement)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});}).catch(()=>{});
 })();

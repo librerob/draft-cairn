@@ -23,7 +23,7 @@ const base='http://127.0.0.1:8765';
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 for(let n=0;n<50;n++){try{if((await fetch(base)).ok)break;}catch{}await wait(100);}
 let context;
-const opts={headless:true,channel:'chromium',args:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`],viewport:{width:1280,height:900}};
+const opts={headless:true,channel:'chromium',args:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`],viewport:{width:1280,height:800}};
 if(process.env.CHROMIUM_PATH)opts.executablePath=process.env.CHROMIUM_PATH;
 const report=[];
 const check=(name)=>{report.push(name);console.log('PASS '+name);};
@@ -47,13 +47,20 @@ try {
   await page.locator('#summary').fill('Synthetic project answer, saved locally.');
   let state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic project answer, saved locally.'));
   const draft=state.drafts.find(d=>d.field.id==='summary');check('typing saves through the real service worker');
-  await page.reload();await page.waitForSelector('[data-cairn-ui]');
+  await page.reload();await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
   await api(ui,'RESTORE',{id:draft.id,tabId});assert.equal(await page.locator('#summary').inputValue(),draft.text);check('reload and explicit restoration to the original empty field');
   await assert.rejects(api(ui,'RESTORE',{id:draft.id,tabId}));check('nonempty destination is never overwritten');
+  await page.getByRole('button',{name:'Simulate session expiry',exact:true}).click();
+  await page.getByRole('link',{name:'Return to an empty application',exact:true}).click();
+  await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
+  await api(ui,'RESTORE',{id:draft.id,tabId});assert.equal(await page.locator('#summary').inputValue(),draft.text);check('deliberate session-expiry navigation and return recovery');
   await page.locator('textarea[name=detail]').nth(0).fill('Synthetic duplicate one');
   await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic duplicate one'));
+  await page.locator('textarea[name=detail]').nth(1).fill('Synthetic duplicate two');
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic duplicate two'));
+  assert((await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic duplicate one'));check('similar fields keep separate draft records');
   const ambiguous=(await api(ui,'STATE')).drafts.find(d=>d.text==='Synthetic duplicate one');
-  await page.reload();await page.waitForSelector('[data-cairn-ui]');
+  await page.reload();await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
   await assert.rejects(api(ui,'RESTORE',{id:ambiguous.id,tabId}));assert.equal(await page.locator('textarea[name=detail]').nth(0).inputValue(),'');check('duplicate field identities refuse restoration');
   for(const selector of ['#password','#card','#otp','#private','#short'])await page.locator(selector).fill('Synthetic excluded value');
   await wait(500);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic excluded value'));check('password, card, OTP, ignored and short inputs excluded');
@@ -69,7 +76,7 @@ try {
   // The isolated closed shadow root is deliberately not exposed through page DOM selectors.
   // CDP inspects the accessibility tree, like a screen reader, to verify the dialog and counter.
   await page.locator('#summary').evaluate((el)=>{el.focus();el.setSelectionRange(0,el.value.length);const d=new DataTransfer();d.setData('text/plain','fits');el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:d,bubbles:true,cancelable:true}));});
-  await page.goto(base+'/index.html?token=synthetic#example');await page.waitForSelector('[data-cairn-ui]');
+  await page.goto(base+'/index.html?token=synthetic#example');await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
   await page.locator('#impact').fill('Synthetic query-page answer');
   state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic query-page answer'));
   assert.equal(state.drafts.find(d=>d.text==='Synthetic query-page answer').restorable,false);
@@ -87,6 +94,11 @@ try {
   const cdp=await context.newCDPSession(page);const ax=await cdp.send('Accessibility.getFullAXTree');
   assert(ax.nodes.some(n=>n.name?.value?.includes('not saved')));check('storage failure preserves earlier data and shows a visible warning');
   await worker.evaluate(()=>{chrome.storage.local.set=globalThis.originalSet;});
+  await api(ui,'DISABLE',{origin:base});
+  await page.locator('#impact').fill('Synthetic while disabled');await wait(500);
+  assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic while disabled'));
+  await api(ui,'ENABLE',{origin:base,tabId});await page.locator('#impact').fill('Synthetic after re-enabling');
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic after re-enabling'));check('turning protection off and on works in an already-open page');
   // Verify expiry is enforced through reads and deletion survives service-worker storage.
   await worker.evaluate(async()=>{const {state}=await chrome.storage.local.get('state');state.drafts.push({id:'expired-synthetic',expires:0,text:'Expired synthetic'});await chrome.storage.local.set({state});});
   assert(!(await api(ui,'STATE')).drafts.some(d=>d.id==='expired-synthetic'));
