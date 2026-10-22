@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Draft Cairn",
+  "version": "0.1.0",
+  "description": "Local answer recovery, paste-limit warnings, and a reusable answer library for sites you choose.",
+  "minimum_chrome_version": "120",
+  "incognito": "not_allowed",
+  "permissions": ["storage", "scripting", "activeTab", "alarms"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_popup": "popup.html", "default_title": "Draft Cairn"},
+  "options_page": "workspace.html",
+  "icons": {"16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png"},
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'; base-uri 'none'"}
+}

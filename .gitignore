@@ -1,0 +1,7 @@
+node_modules/
+dist/
+test-results/
+.browser-profile/
+*.log
+.env*
+__pycache__/

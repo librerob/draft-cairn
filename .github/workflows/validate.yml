@@ -1,0 +1,54 @@
+name: Validate and package
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the validated v0.1.0 preview release
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/check.mjs
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: |
+          python3 scripts/package.py
+          cp dist/SHA256SUMS /tmp/first-checksum
+          python3 scripts/package.py
+          cmp dist/SHA256SUMS /tmp/first-checksum
+          cd dist && sha256sum --check SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: validated-release
+          path: |
+            dist/
+            test-results/browser-summary.json
+            docs/images/*.png
+          retention-days: 14
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: python3 scripts/package.py
+      - name: Publish preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create v0.1.0 dist/draft-cairn-0.1.0.zip dist/SHA256SUMS --target "$GITHUB_SHA" --prerelease --title "Draft Cairn 0.1.0 · preview" --notes-file docs/release-notes.md
