@@ -3,6 +3,7 @@
   globalThis.__draftCairn = true;
   const C = globalThis.Cairn;
   let active = false;
+  let activation = 0;
   let timer;
   let pending;
   let lastField;
@@ -130,10 +131,11 @@
   chrome.runtime.onMessage.addListener((m,sender,respond)=>{
     if (sender.id === chrome.runtime.id && m.type === 'RECHECK') {
       respond({ok:true});
-      message({type:'HELLO'}).then(()=>{active=true;mount();}).catch(()=>{active=false;pending=null;clearTimeout(timer);host?.remove();});return;
+      const version=activation;
+      message({type:'HELLO'}).then(()=>{if(version===activation){active=true;mount();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);host?.remove();}});return;
     }
-    if (sender.id === chrome.runtime.id && m.type === 'START') {active=true;mount();respond({ok:true});return;}
-    if (sender.id === chrome.runtime.id && m.type === 'STOP') {active=false;pending=null;clearTimeout(timer);host?.remove();respond({ok:true});return;}
+    if (sender.id === chrome.runtime.id && m.type === 'START') {activation++;active=true;mount();respond({ok:true});return;}
+    if (sender.id === chrome.runtime.id && m.type === 'STOP') {activation++;active=false;pending=null;clearTimeout(timer);host?.remove();respond({ok:true});return;}
     if (sender.id !== chrome.runtime.id || m.type !== 'RESTORE') return;
     (async()=>{
       if (!active) return {ok:false,error:'Protection is off. Copy the answer instead.'};
@@ -152,5 +154,6 @@
     })().then(respond,()=>respond({ok:false,error:'Protection is off or the page is unavailable. Copy the answer instead.'}));
     return true;
   });
-  message({type:'HELLO'}).then(()=>{active=true;if(document.documentElement)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});}).catch(()=>{});
+  const initialVersion=activation;
+  message({type:'HELLO'}).then(()=>{if(initialVersion!==activation)return;active=true;if(document.documentElement)mount();else document.addEventListener('DOMContentLoaded',()=>{if(active)mount();},{once:true});}).catch(()=>{});
 })();

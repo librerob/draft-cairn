@@ -51,7 +51,7 @@ npm run test:browser
 python3 scripts/package.py
 ```
 
-On Windows use `python` instead of `python3`. Browser tests use an isolated temporary profile and a test-only localhost host pre-grant. They exercise the shipped JavaScript; they do not automate Chrome's native permission dialog. Set `CHROMIUM_PATH` to a Chrome for Testing executable if necessary. [Validation notes](docs/validation.md) separate local, CI, and unverified checks.
+On Windows use `python` instead of `python3`. Browser tests use an isolated temporary profile and a test-only localhost host pre-grant. They exercise the shipped JavaScript; they do not automate Chrome's native permission dialog or revocation. Set `CHROMIUM_PATH` to a Chrome for Testing executable if necessary. [Validation notes](docs/validation.md) separate local, CI, and unverified checks.
 
 The package script uses an exact file allowlist, fixed metadata, and uncompressed ZIP entries for reproducible bytes. The extension ZIP contains only the 14 runtime files; source, demo, tests, and policies remain in this repository. Icon generation is reproducible with `python3 scripts/icons.py`.
 

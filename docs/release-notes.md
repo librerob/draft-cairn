@@ -6,7 +6,7 @@ An early, free, MIT-licensed preview for local recovery of long application answ
 - Project-grouped answer library with search, copying, versioned import/export, and deletion controls.
 - No accounts, analytics, remote AI, paid features, or recurring application infrastructure.
 
-Validation includes Node/static checks, real Chromium integration on GitHub Actions, browser-process restart persistence, failure injection, and deterministic packaging. Browser integration uses a temporary localhost host pre-grant; native permission prompts and actual OS clipboard interaction still need manual verification. Windows policy blocked local downloaded Chromium execution. See `docs/validation.md` for the exact scope and remaining checks.
+Validation includes Node/static checks, real Chromium integration on GitHub Actions, browser-process restart persistence, failure injection, and deterministic packaging. Browser integration uses a temporary localhost host pre-grant; native permission prompts/removal and actual OS clipboard interaction still need manual verification. Windows policy blocked local downloaded Chromium execution. See `docs/validation.md` for the exact scope and remaining checks.
 
 Download and extract the extension ZIP, verify it against SHA256SUMS, and load the extracted folder via Chrome's Developer mode / Load unpacked. Full source and policies are in the repository.
 

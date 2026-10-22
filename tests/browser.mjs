@@ -31,6 +31,9 @@ const check=(name)=>{report.push(name);console.log('PASS '+name);};
 async function launch(){
   context=await chromium.launchPersistentContext(profile,opts);
   const worker=context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  // Chrome will not remove a required test-manifest grant. Retain it while exercising
+  // the independent exact-origin capture switch. Native permission removal is manual.
+  await worker.evaluate(()=>{chrome.permissions.remove=async()=>false;});
   const id=new URL(worker.url()).host;
   const ui=await context.newPage();await ui.goto(`chrome-extension://${id}/workspace.html`);
   await ui.waitForFunction(()=>document.getElementById('summary').textContent.includes('revisions'));
@@ -64,6 +67,11 @@ try {
   await page.reload();await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
   await assert.rejects(api(ui,'RESTORE',{id:ambiguous.id,tabId}));assert.equal(await page.locator('textarea[name=detail]').nth(0).inputValue(),'');check('duplicate field identities refuse restoration');
   for(const selector of ['#password','#card','#otp','#private','#short'])await page.locator(selector).fill('Synthetic excluded value');
+  await page.evaluate(()=>{
+    for(const style of ['display:none','opacity:0','width:0;height:0;padding:0;border:0']) {
+      const el=document.createElement('textarea');el.style.cssText=style;document.body.append(el);el.value='Synthetic excluded value';el.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  });
   await wait(500);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic excluded value'));check('password, card, OTP, ignored and short inputs excluded');
   await page.locator('#summary').fill('Synthetic existing');
   const original='Synthetic oversized paste 😀 é '.repeat(30);
@@ -73,10 +81,13 @@ try {
   },original);
   assert(stopped);assert.equal(await page.locator('#summary').inputValue(),'Synthetic existing');
   state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text===original));check('oversized selected-text paste is blocked and full original persisted');
+  const pasteCDP=await context.newCDPSession(page);const pasteAX=await pasteCDP.send('Accessibility.getFullAXTree');
+  assert(pasteAX.nodes.some(n=>n.role?.value==='dialog'));assert(pasteAX.nodes.some(n=>n.value?.value===original));check('larger editor exposes a labelled dialog and complete original answer to accessibility APIs');
   await page.keyboard.press('Escape');
   // The isolated closed shadow root is deliberately not exposed through page DOM selectors.
   // CDP inspects the accessibility tree, like a screen reader, to verify the dialog and counter.
-  await page.locator('#summary').evaluate((el)=>{el.focus();el.setSelectionRange(0,el.value.length);const d=new DataTransfer();d.setData('text/plain','fits');el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:d,bubbles:true,cancelable:true}));});
+  const fitStopped=await page.locator('#summary').evaluate((el)=>{el.focus();el.setSelectionRange(0,el.value.length);const d=new DataTransfer();d.setData('text/plain','fits');const event=new ClipboardEvent('paste',{clipboardData:d,bubbles:true,cancelable:true});el.dispatchEvent(event);return event.defaultPrevented;});
+  assert.equal(fitStopped,false);check('a fitting paste over a selection is allowed');
   await page.goto(base+'/index.html?token=synthetic#example');await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
   await page.locator('#impact').fill('Synthetic query-page answer');
   state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic query-page answer'));
@@ -107,6 +118,9 @@ try {
   const durable=(await api(ui,'STATE')).library.length;
   await context.close();({worker,id,ui}=await launch());assert.equal((await api(ui,'STATE')).library.length,durable);
   assert((await api(ui,'STATE')).drafts.some(d=>d.id===draft.id));check('drafts and library survive a real browser process restart');
+  const hostile=(await api(ui,'STATE')).library.find(a=>a.project==='Synthetic hostile strings');await api(ui,'DELETE_ANSWER',{id:hostile.id});
+  await api(ui,'SAVE_ANSWER',{answer:{title:'Workshop accessibility',project:'Northbank',text:'Synthetic approved wording: our workshop offers step-free access, quiet sessions, and materials in accessible formats.'}});
+  await ui.reload();await ui.waitForFunction(()=>document.getElementById('summary').textContent.includes('revisions'));
   // Documentation screenshots contain only fixture data and use the unmodified shipped UI.
   const screenshots=path.join(root,'docs','images');await mkdir(screenshots,{recursive:true});
   await ui.screenshot({path:path.join(screenshots,'recovery.png')});

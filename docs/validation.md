@@ -10,7 +10,7 @@ The Windows host has Chrome installed, but application-control policy blocked ru
 
 ## CI browser integration
 
-`tests/browser.mjs` launches real Chromium with an isolated persistent profile, installs a temporary copy of the extension, and exercises the shipped JavaScript. Only the test manifest adds a loopback host pre-grant; the shipping manifest retains optional host access. The native Chrome permission prompt is not automated.
+`tests/browser.mjs` launches real Chromium with an isolated persistent profile, installs a temporary copy of the extension, and exercises the shipped JavaScript. Only the test manifest adds a loopback host pre-grant; the shipping manifest retains optional host access. The native Chrome permission prompt and permission removal are not automated. The test keeps its required loopback grant while exercising the independent exact-origin capture switch.
 
 Scenarios cover capture disabled by default, typing and saving, reload and explicit restore, refusal to replace existing text, duplicate-field refusal, sensitive-field exclusions, selected-text oversized paste with complete original persistence, query/fragment omission and copy-only recovery, hostile library content rendered as text, atomic malformed import, injected storage failure and visible warning, expiry, deletion, process restart with persistent drafts/library, and a 390px workspace layout. Unit checks cover exact-fit and Unicode edge cases. The fixture session-expiry page is included for supervised testing.
 

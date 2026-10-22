@@ -27,6 +27,8 @@ test('revisions and quotas are bounded without silently discarding another field
   const latest=state.drafts[0];C.addDraft(state,{key:'a',kind:'draft',text:'Another edit'},latest.saved+1);assert.equal(state.drafts.length,4);
   assert.throws(()=>C.addDraft(state,{key:'a',kind:'draft',text:'x'.repeat(C.MAX_TEXT+1)}));
   assert.throws(()=>C.bounded({...C.fresh(),library:Array(301).fill({text:'synthetic'})}));
+  assert.throws(()=>C.bounded({...C.fresh(),drafts:Array(181).fill({text:'synthetic'})}));
+  assert.throws(()=>C.bounded({...C.fresh(),library:Array(70).fill({text:'x'.repeat(100000)})}));
 });
 test('expiry applies to drafts and original pastes, never explicit library answers',()=>{
   const state=C.fresh();state.library=[{title:'Synthetic',text:'Example'}];
