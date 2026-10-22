@@ -1,10 +1,10 @@
 {
   "name": "draft-cairn",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/core.test.js",
+    "test": "node --test tests/core.test.js tests/crypto.test.js",
     "test:browser": "node tests/browser.mjs",
     "demo": "node scripts/demo.mjs",
     "check": "node scripts/check.mjs"

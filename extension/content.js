@@ -9,6 +9,14 @@
   let lastField;
   let host, root, status;
   const fieldStatus = new WeakMap();
+  let ignoredFields=new Set(), excluded=new WeakSet(), focusVersion=0;
+  async function excludedField(el) {
+    const pageKey=await digest(location.origin+location.pathname);
+    const id=await digest(location.origin+pageKey+C.fieldIdentity(describe(el)));
+    if(ignoredFields.has(id)){excluded.add(el);return true;}
+    return false;
+  }
+  function configure(data){ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();}
   const shorten = s => (s || '').trim().replace(/\s+/g,' ').slice(0,200);
   const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))), b=>b.toString(16).padStart(2,'0')).join('');
   function describe(el) {
@@ -20,7 +28,7 @@
         (el.checkVisibility ? el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}) : getComputedStyle(el).visibility !== 'hidden') &&
         !el.closest('[inert],[aria-hidden="true"],[hidden]'),
       disabled:el.disabled || el.matches(':disabled'), readOnly:el.readOnly,
-      private:!!el.closest('[data-cairn-ignore]'), maxLength:el.maxLength};
+      private:excluded.has(el) || !!el.closest('[data-cairn-ignore]'), maxLength:el.maxLength};
   }
   function fields() {
     return Array.from(document.querySelectorAll('textarea,input')).map(el=>({el,...describe(el)})).filter(C.allowedField);
@@ -49,11 +57,18 @@
   function announce(text, error = false) {
     mount(); status.textContent = `Draft Cairn · ${text}`; status.classList.toggle('error',error);
   }
-  function focusedStatus() {
+  async function focusedStatus() {
     if (!active) return;
+    const version=++focusVersion;
     const el=document.activeElement;
     if (el===host) return;
     if (el?.matches?.('textarea,input') && C.allowedField(describe(el))) {
+      if(ignoredFields.size) {
+        announce('checking field…');
+        const blocked=await excludedField(el);
+        if(version!==focusVersion || !active)return;
+        if(blocked){lastField=null;announce('not protected in this field · excluded in settings',true);return;}
+      }
       lastField=el;
       const saved=fieldStatus.get(el);
       announce(saved?.text || 'supported field · not saved yet',saved?.error || false);
@@ -79,7 +94,7 @@
   }
   async function snapshot(el, text, kind) {
     const field = describe(el);
-    if (!C.allowedField(field)) return null;
+    if (!C.allowedField(field) || await excludedField(el)) return null;
     const list = fields();
     return {type:'CAPTURE',field,slot:list.findIndex(f=>f.el===el),structure:await signature(list),text,kind,title:document.title.slice(0,160)};
   }
@@ -120,7 +135,13 @@
     const copy = document.createElement('button'); copy.type='button'; copy.className='primary'; copy.textContent='Copy answer';
     copy.onclick = async()=>{try {await navigator.clipboard.writeText(area.value); result.textContent='Copied. Paste it when you are ready.';}catch {area.focus();area.select();result.textContent='Copy was blocked. Press Ctrl+C or Command+C to copy the selected answer.';}};
     const close = document.createElement('button'); close.type='button'; close.textContent='Close editor'; close.onclick=()=>dialog.close();
-    actions.append(copy,close); dialog.append(heading,note,label,area,counter,help,actions,result);
+    const ignore=document.createElement('button');ignore.type='button';ignore.textContent='Never capture this field';
+    ignore.onclick=async e=>{
+      if(!e.isTrusted || !confirm('Stop capturing this field and delete its recovery revisions? Fields with the same identity on this page are excluded too. Library answers remain.'))return;
+      try{await message({type:'IGNORE_FIELD',field:describe(el)});excluded.add(el);if(pending?.el===el)pending=null;dialog.close();lastField=null;announce('not protected in this field · excluded in settings',true);}
+      catch{result.textContent='Could not exclude this field. Turn protection off from the toolbar popup.';}
+    };
+    actions.append(copy,close,ignore); dialog.append(heading,note,label,area,counter,help,actions,result);
     dialog.addEventListener('close',()=>{dialog.remove();if(before?.isConnected)before.focus();});
     root.append(dialog); dialog.showModal(); area.focus();
   }
@@ -152,16 +173,19 @@
     if (sender.id === chrome.runtime.id && m.type === 'RECHECK') {
       respond({ok:true});
       const version=activation;
-      message({type:'HELLO'}).then(()=>{if(version===activation){active=true;focusedStatus();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);host?.remove();}});return;
+      message({type:'HELLO'}).then(data=>{if(version===activation){configure(data);active=true;focusedStatus();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);host?.remove();}});return;
     }
-    if (sender.id === chrome.runtime.id && m.type === 'START') {activation++;active=true;focusedStatus();respond({ok:true});return;}
+    if (sender.id === chrome.runtime.id && m.type === 'START') {
+      const version=++activation;respond({ok:true});
+      message({type:'HELLO'}).then(data=>{if(version===activation){configure(data);active=true;focusedStatus();}}).catch(()=>{});return;
+    }
     if (sender.id === chrome.runtime.id && m.type === 'STOP') {activation++;active=false;pending=null;clearTimeout(timer);host?.remove();respond({ok:true});return;}
     if (sender.id !== chrome.runtime.id || m.type !== 'RESTORE') return;
     (async()=>{
       if (!active) return {ok:false,error:'Protection is off. Copy the answer instead.'};
       const list=fields(), structure=await signature(list), pageKey=await digest(location.origin+location.pathname);
       const found=C.matchField(m.draft,list,pageKey,structure,!location.search && !location.hash);
-      if (!found || !found.el.isConnected || !C.allowedField(describe(found.el)) || found.el.value !== '')
+      if (!found || !found.el.isConnected || !C.allowedField(describe(found.el)) || await excludedField(found.el) || found.el.value !== '')
         return {ok:false,error:'The page or field changed, the match is uncertain, or the field already has text. Copy the answer instead.'};
       if (found.el.maxLength >= 0 && m.draft.text.length > found.el.maxLength)
         return {ok:false,error:'The page limit changed. Copy the answer instead.'};
@@ -175,5 +199,5 @@
     return true;
   });
   const initialVersion=activation;
-  message({type:'HELLO'}).then(()=>{if(initialVersion!==activation)return;active=true;if(document.documentElement)focusedStatus();else document.addEventListener('DOMContentLoaded',()=>{if(active)focusedStatus();},{once:true});}).catch(()=>{});
+  message({type:'HELLO'}).then(data=>{if(initialVersion!==activation)return;configure(data);active=true;if(document.documentElement)focusedStatus();else document.addEventListener('DOMContentLoaded',()=>{if(active)focusedStatus();},{once:true});}).catch(()=>{});
 })();

@@ -46,7 +46,27 @@
     state.drafts = state.drafts.filter(d => d.expires > now);
     return state;
   }
-  function fresh() { return {version: 1, days: 7, sites: [], drafts: [], library: []}; }
+  function fresh() { return {version:1,days:1,metadata:false,sessionOnly:false,sites:[],blockedSites:[],ignoredFields:[],drafts:[],library:[]}; }
+  function privacyDefaults(state) {
+    return {...state,metadata:state.metadata ?? true,sessionOnly:state.sessionOnly ?? false,
+      blockedSites:state.blockedSites || [],ignoredFields:state.ignoredFields || []};
+  }
+  function minimalDraft(draft) {
+    return {...draft,title:'',field:{label:''},restorable:false};
+  }
+  // Public revision metadata can be managed without decrypting answer payloads.
+  function planDraft(drafts,incoming,days,now=Date.now()) {
+    let list=drafts.filter(d=>d.expires>now);
+    const same=list.filter(d=>d.key===incoming.key).sort((a,b)=>b.saved-a.saved);
+    let started=now;
+    if(same[0] && now-(same[0].started ?? same[0].saved)<30000 && incoming.kind!=='paste') {
+      started=same[0].started ?? same[0].saved;list=list.filter(d=>d.id!==same[0].id);
+    }
+    const earlier=list.filter(d=>d.key===incoming.key).sort((a,b)=>b.saved-a.saved);
+    const remove=new Set(earlier.slice(3).map(d=>d.id));list=list.filter(d=>!remove.has(d.id));
+    const entry={...incoming,saved:now,started,expires:now+(incoming.kind==='paste'?Math.min(days*DAY,3600000):days*DAY)};
+    return [entry,...list];
+  }
   const sizes = new WeakMap();
   function bytes(value) {
     if (Object.isFrozen(value) && sizes.has(value)) return sizes.get(value);
@@ -125,5 +145,5 @@
     return hits.length === 1 && (saved.field.id || saved.field.name) ? hits[0] : null;
   }
   globalThis.Cairn = Object.freeze({MAX_TEXT, MAX_BYTES, MAX_DRAFTS, MAX_LIBRARY, DAY, originOf, hostPattern,
-    allowedField, pasteCapacity, prune, fresh, bounded, libraryBounded, stateBytes, addDraft, libraryItem, parseImport, fieldIdentity, matchField});
+    allowedField, pasteCapacity, prune, fresh, privacyDefaults, minimalDraft, planDraft, bounded, libraryBounded, stateBytes, addDraft, libraryItem, parseImport, fieldIdentity, matchField});
 })();

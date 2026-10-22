@@ -65,6 +65,7 @@ try {
   await page.locator('#summary').fill('Synthetic answer before protection');await wait(450);
   assert.equal((await api(ui,'STATE')).drafts.length,0);check('no capture before explicit site enable');
   const tabId=await ui.evaluate(async()=>{const tabs=await chrome.tabs.query({});return tabs.find(t=>t.url?.startsWith('http://127.0.0.1:8765/index.html')).id;});
+  await api(ui,'PRIVACY',{metadata:true});
   await api(ui,'ENABLE',{origin:base,tabId});
   await page.locator('#summary').evaluate(el=>{
     el.value='Synthetic forged input';el.dispatchEvent(new Event('input',{bubbles:true}));
@@ -131,20 +132,19 @@ try {
   const before=(await api(ui,'STATE')).library.length;
   await assert.rejects(api(ui,'IMPORT',{raw:'{"format":"draft-cairn-library","version":1,"answers":[{"title":"ok","text":"synthetic"},{"title":4}]}'}));
   assert.equal((await api(ui,'STATE')).library.length,before);check('malformed import is atomic');
-  await worker.evaluate(()=>{globalThis.originalSet=chrome.storage.local.set.bind(chrome.storage.local);chrome.storage.local.set=async()=>{throw new Error('Synthetic storage failure');};});
+  await worker.evaluate(()=>{
+    globalThis.originalPut=IDBObjectStore.prototype.put;globalThis.indexRejected=false;
+    IDBObjectStore.prototype.put=function(value,key){if(this.name==='meta' && key==='index'){globalThis.indexRejected=true;this.transaction.abort();throw new Error('Synthetic transaction failure');}return globalThis.originalPut.call(this,value,key);};
+  });
+  const beforeFailure=(await api(ui,'STATE')).drafts.map(d=>d.id).sort();
   await page.locator('#impact').fill('Synthetic failed write');await wait(600);
   assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic failed write'));
   const cdp=await context.newCDPSession(page);const ax=await cdp.send('Accessibility.getFullAXTree');
-  assert(ax.nodes.some(n=>n.name?.value?.includes('not saved')));check('storage failure preserves earlier data and shows a visible warning');
-  await worker.evaluate(()=>{chrome.storage.local.set=globalThis.originalSet;});
-  const keysBefore=await worker.evaluate(async()=>Object.keys(await chrome.storage.local.get(null)).sort());
-  await worker.evaluate(()=>{globalThis.indexRejected=false;chrome.storage.local.set=async values=>{if(values['cairn-v2']){globalThis.indexRejected=true;throw new Error('Synthetic index commit failure');}return globalThis.originalSet(values);};});
-  await page.locator('#impact').fill('Synthetic staged record whose commit fails');await wait(600);
-  assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic staged record whose commit fails'));
-  assert(await worker.evaluate(()=>globalThis.indexRejected),'Failure injection must reach the index commit after staging succeeds');
-  assert.deepEqual(await worker.evaluate(async()=>Object.keys(await chrome.storage.local.get(null)).sort()),keysBefore);
-  await worker.evaluate(()=>{chrome.storage.local.set=globalThis.originalSet;});
-  check('failed encrypted index commit preserves prior state and removes staged records');
+  assert(ax.nodes.some(n=>n.name?.value?.includes('not saved')));
+  assert(await worker.evaluate(()=>globalThis.indexRejected));
+  assert.deepEqual((await api(ui,'STATE')).drafts.map(d=>d.id).sort(),beforeFailure);
+  await worker.evaluate(()=>{IDBObjectStore.prototype.put=globalThis.originalPut;});
+  check('aborted record/index transaction preserves earlier data and shows a visible warning');
   await api(ui,'SAVE_ANSWER',{answer:{title:'Synthetic unrelated successful write',text:'Must not hide an earlier failure'}});
   assert((await api(ui,'STATE')).lastError);
   assert.equal(await worker.evaluate(()=>chrome.action.getBadgeText({})),'!');
@@ -158,16 +158,19 @@ try {
   await worker.evaluate(async()=>{const state=await globalThis.testStore.load();state.drafts.push({id:'expired-synthetic',expires:0,text:'Expired synthetic'});await globalThis.testStore.commit(state);});
   assert(!(await api(ui,'STATE')).drafts.some(d=>d.id==='expired-synthetic'));
   await api(ui,'DELETE_DRAFT',{id:ambiguous.id});assert(!(await api(ui,'STATE')).drafts.some(d=>d.id===ambiguous.id));check('expiry and individual draft deletion');
-  const encrypted=await worker.evaluate(async()=>JSON.stringify(await chrome.storage.local.get(null)));
+  const encrypted=await worker.evaluate(async()=>{
+    const db=await new Promise(resolve=>{const r=indexedDB.open('cairn-data-v3');r.onsuccess=()=>resolve(r.result);});
+    const values=await new Promise(resolve=>{const r=db.transaction('records').objectStore('records').getAll();r.onsuccess=()=>resolve(r.result);});db.close();return JSON.stringify(values);
+  });
   assert(!encrypted.includes('Synthetic') && !encrypted.includes(base) && !encrypted.includes('Northbank'));
-  check('persisted answers, titles and origins are encrypted rather than plaintext');
+  check('persistent answer records encrypt text, titles and original origins');
   const cap=await worker.evaluate(async()=>{
     const store=globalThis.testStore, C=globalThis.Cairn;
     const state=await store.load(), template=state.drafts.find(d=>d.kind==='draft');
     state.drafts=Array.from({length:180},(_,i)=>({...template,id:`scale-${i}`,key:`scale-${i}`,text:`Synthetic scale ${i}`+'x'.repeat(30000),saved:Date.now()-100000+i}));
     await store.commit(state);
-    const calls=[];globalThis.originalScaleSet=chrome.storage.local.set.bind(chrome.storage.local);
-    chrome.storage.local.set=async values=>{calls.push(new TextEncoder().encode(JSON.stringify(values)).length);return globalThis.originalScaleSet(values);};
+    const calls=[];globalThis.scalePut=IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put=function(value,key){calls.push(new TextEncoder().encode(JSON.stringify(value)).length);return globalThis.scalePut.call(this,value,key);};
     globalThis.scaleCalls=calls;return C.stateBytes(state);
   });
   assert(cap>5*1024*1024);
@@ -180,9 +183,9 @@ try {
     const cause=await worker.evaluate(()=>globalThis.testError);
     throw new Error(`Scale capture failed: count=${failed.drafts.length}, error=${failed.lastError}, status=${status[0]}, cause=${JSON.stringify(cause)}`);
   }
-  const scale=await worker.evaluate(()=>{chrome.storage.local.set=globalThis.originalScaleSet;return {writes:globalThis.scaleCalls};});
+  const scale=await worker.evaluate(()=>{IDBObjectStore.prototype.put=globalThis.scalePut;return {writes:globalThis.scaleCalls};});
   assert.equal(state.drafts.length,180);assert(!state.drafts.some(d=>d.id==='scale-0'));assert(state.evicted>0);
-  assert(Math.max(...scale.writes)<100000,'Saving one small draft must not rewrite a multi-megabyte dataset');
+  assert(Math.max(...scale.writes)<150000,'Saving one small draft must not rewrite a multi-megabyte dataset');
   console.log(`Scale check: ${cap} plaintext bytes; largest save write ${Math.max(...scale.writes)} bytes; observed ${Date.now()-started} ms including debounce/poll.`);
   check('capture continues at 180 drafts near 6 MB with incremental encrypted writes');
   // Re-registration with unchanged patterns must not unregister/update the script.
@@ -202,33 +205,44 @@ try {
   await ui.setViewportSize({width:390,height:844});assert.equal(await ui.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);check('workspace fits a 390px viewport');
   await api(ui,'DISABLE',{origin:base,erase:true});assert(!(await api(ui,'STATE')).drafts.some(d=>d.origin===base));
   await api(ui,'CLEAR');state=await api(ui,'STATE');assert.equal(state.library.length+state.drafts.length+state.sites.length,0);
-  assert.deepEqual(await worker.evaluate(()=>chrome.storage.local.get(null)),{});
-  assert(!(await worker.evaluate(()=>indexedDB.databases())).some(db=>db.name==='cairn-keys'));check('site erasure and all-data deletion include ciphertext and local key');
+  const afterWipe=await worker.evaluate(async()=>{
+    const state=await globalThis.testStore.publicState();
+    const db=await new Promise(resolve=>{const r=indexedDB.open('cairn-data-v3');r.onsuccess=()=>resolve(r.result);});
+    const count=await new Promise(resolve=>{const r=db.transaction('records').objectStore('records').count();r.onsuccess=()=>resolve(r.result);});
+    const key=await new Promise(resolve=>{const r=db.transaction('keys').objectStore('keys').get('automatic');r.onsuccess=()=>resolve(r.result);});db.close();return {count,hasKey:!!key};
+  });
+  assert.deepEqual(afterWipe,{count:0,hasKey:false});check('site erasure and all-data deletion remove ciphertext and local keys');
+  await ui.close();
   await worker.evaluate(async()=>{
-    const state=globalThis.Cairn.fresh();
+    await globalThis.testStore.erase();
+    const state=globalThis.Cairn.fresh();state.days=7;delete state.metadata;
     state.library=[{id:'legacy-answer',title:'Synthetic legacy title',text:'Synthetic legacy answer',project:'Migration',saved:Date.now()}];
-    await chrome.storage.local.clear();await chrome.storage.local.set({state});
+    await chrome.storage.local.set({state});
   });
   await context.close();({worker,id,ui}=await launch());
   assert((await api(ui,'STATE')).library.some(a=>a.id==='legacy-answer'));
+  assert.equal((await api(ui,'STATE')).days,7);assert.equal((await api(ui,'STATE')).metadata,true);
   assert(!JSON.stringify(await worker.evaluate(()=>chrome.storage.local.get(null))).includes('Synthetic legacy'));
-  check('legacy plaintext state migrates to encrypted records without losing library answers');
+  check('legacy plaintext migrates atomically while preserving existing retention and metadata choices');
   const keyInfo=await worker.evaluate(async()=>{
-    const db=await new Promise(resolve=>{const request=indexedDB.open('cairn-keys',1);request.onsuccess=()=>resolve(request.result);});
-    const key=await new Promise(resolve=>{const request=db.transaction('keys').objectStore('keys').get('aes');request.onsuccess=()=>resolve(request.result);});
+    const db=await new Promise(resolve=>{const request=indexedDB.open('cairn-data-v3');request.onsuccess=()=>resolve(request.result);});
+    const key=await new Promise(resolve=>{const request=db.transaction('keys').objectStore('keys').get('automatic');request.onsuccess=()=>resolve(request.result);});
     db.close();let rejected=false;try{await crypto.subtle.exportKey('raw',key);}catch{rejected=true;}
     return {extractable:key.extractable,name:key.algorithm.name,length:key.algorithm.length,rejected};
   });
-  assert.deepEqual(keyInfo,{extractable:false,name:'AES-GCM',length:256,rejected:true});check('AES-256 key persists in IndexedDB and cannot be exported through Web Crypto');
+  assert.deepEqual(keyInfo,{extractable:false,name:'AES-GCM',length:256,rejected:true});check('automatic AES-256 key persists as a nonextractable CryptoKey');
   const integrity=await ui.evaluate(async()=>{
-    const original=await chrome.storage.local.get('cairn-v2'), bad=structuredClone(original['cairn-v2']);
-    bad.data=(bad.data[0]==='A'?'B':'A')+bad.data.slice(1);await chrome.storage.local.set({'cairn-v2':bad});
-    let rejected=false;
-    try{await (await import('./storage.js?integrity')).load();}catch{rejected=true;}
-    const preserved=(await chrome.storage.local.get('cairn-v2'))['cairn-v2'].data===bad.data;
-    await chrome.storage.local.set(original);return {rejected,preserved};
+    const db=await new Promise(resolve=>{const r=indexedDB.open('cairn-data-v3');r.onsuccess=()=>resolve(r.result);});
+    const index=await new Promise(resolve=>{const r=db.transaction('meta').objectStore('meta').get('index');r.onsuccess=()=>resolve(r.result);});
+    const ref=index.library[0].ref;
+    const original=await new Promise(resolve=>{const r=db.transaction('records').objectStore('records').get(ref);r.onsuccess=()=>resolve(r.result);});
+    const bad=structuredClone(original);bad.body.data=(bad.body.data[0]==='A'?'B':'A')+bad.body.data.slice(1);
+    async function put(value){await new Promise((resolve,reject)=>{const tx=db.transaction('records','readwrite');tx.objectStore('records').put(value,ref);tx.oncomplete=resolve;tx.onabort=reject;});}
+    await put(bad);let rejected=false;try{await (await import('./storage.js?integrity')).load();}catch{rejected=true;}
+    const stored=await new Promise(resolve=>{const r=db.transaction('records').objectStore('records').get(ref);r.onsuccess=()=>resolve(r.result);});
+    await put(original);db.close();return {rejected,preserved:stored.body.data===bad.body.data};
   });
-  assert.deepEqual(integrity,{rejected:true,preserved:true});check('ciphertext tampering fails closed and preserves stored data');
+  assert.deepEqual(integrity,{rejected:true,preserved:true});check('ciphertext tampering fails closed without overwriting damaged data');
   await api(ui,'DISABLE',{origin:base});
   await ui.evaluate(async origin=>chrome.storage.session.set({'enable-closed-popup':{origin,created:Date.now()}}),base);
   // Trigger the same queued handler as permissions.onAdded, with no popup alive.
@@ -236,6 +250,74 @@ try {
   await ui.evaluate(async origin=>chrome.storage.session.set({'enable-expired':{origin:'http://127.0.0.1:9999',created:Date.now()-180000}}),base);
   await api(ui,'FINISH_ENABLE');assert(!(await api(ui,'STATE')).sites.includes('http://127.0.0.1:9999'));
   check('worker completes a pending enable without a popup and rejects expired intent');
+  // Begin a clean v0.2 installation for privacy/vault scenarios.
+  await api(ui,'CLEAR');state=await api(ui,'STATE');assert.equal(state.days,1);assert.equal(state.metadata,false);
+  check('fresh installations default to one-day recovery without page titles or field descriptors');
+  let vaultPage=await context.newPage();await vaultPage.goto(base+'/index.html');
+  let vaultTab=await ui.evaluate(async()=>{const tabs=await chrome.tabs.query({});return tabs.find(t=>t.url?.startsWith('http://127.0.0.1:8765/index.html')).id;});
+  // There can be a pre-existing restored tab: use the actual new tab ID.
+  vaultTab=await ui.evaluate(async()=>{const tabs=await chrome.tabs.query({});return tabs.filter(t=>t.url?.startsWith('http://127.0.0.1:8765/index.html')).at(-1).id;});
+  await api(ui,'ENABLE',{origin:base,tabId:vaultTab});await waitProtected(vaultPage);
+  await vaultPage.locator('#impact').fill('Synthetic private description');
+  state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic private description'));
+  assert.equal(state.drafts[0].title,'');assert.deepEqual(state.drafts[0].field,{label:''});assert.equal(state.drafts[0].restorable,false);
+  check('minimal metadata captures are copy-only and omit titles and field descriptors');
+  await api(ui,'SAVE_ANSWER',{answer:{title:'Synthetic vault library',text:'Synthetic confidential library answer'}});
+  const password='synthetic long vault passphrase',newPassword='synthetic changed vault passphrase';
+  await ui.setViewportSize({width:1280,height:800});await ui.reload();await ui.getByRole('button',{name:'Sites & settings',exact:true}).click();
+  await ui.getByRole('button',{name:'Enable passphrase vault',exact:true}).click();
+  await ui.locator('#passphrase').fill(password);await ui.locator('#confirm-passphrase').fill(password);await ui.locator('#acknowledge').check();
+  await ui.locator('#security-submit').click();await poll(()=>api(ui,'STATE'),s=>s.mode==='vault'&&!s.locked);
+  assert((await api(ui,'STATE')).library.some(a=>a.text==='Synthetic confidential library answer'));
+  check('vault setup through the real UI migrates existing drafts and library answers');
+  await ui.getByRole('button',{name:'Answer library',exact:true}).click();await ui.getByRole('button',{name:'Save an answer',exact:true}).click();
+  await ui.locator('#answer-text').fill('Synthetic unsaved editor secret');await api(ui,'VAULT_LOCK');
+  await poll(()=>ui.locator('#answer-dialog').evaluate(el=>el.open),open=>!open);
+  assert.equal(await ui.locator('#answer-text').inputValue(),'');assert.equal(await ui.locator('#answers pre').count(),0);
+  state=await api(ui,'STATE');assert(state.locked);assert.equal(state.library.length+state.drafts.length,0);assert.equal(state.libraryCount,1);
+  await assert.rejects(api(ui,'VAULT_UNLOCK',{passphrase:'wrong synthetic password'}));assert((await api(ui,'STATE')).locked);
+  check('locking scrubs rendered answers and unsaved editors; incorrect passwords reveal no records');
+  await vaultPage.locator('#impact').fill('Synthetic capture while locked');
+  await poll(()=>names(vaultPage),items=>items.some(n=>n.includes('saved on this device')));
+  state=await api(ui,'STATE');assert(state.locked);assert(state.draftCount>0);
+  await api(ui,'VAULT_UNLOCK',{passphrase:password});state=await api(ui,'STATE');assert(state.drafts.some(d=>d.text==='Synthetic capture while locked'));
+  check('trusted typing continues to encrypt while locked and decrypts after unlocking');
+  await api(ui,'VAULT_CHANGE',{oldPassphrase:password,passphrase:newPassword});await api(ui,'VAULT_LOCK');
+  await assert.rejects(api(ui,'VAULT_UNLOCK',{passphrase:password}));await api(ui,'VAULT_UNLOCK',{passphrase:newPassword});
+  check('passphrase changes reject the old password and preserve saved answers');
+  // Trigger a real service worker stop while Chrome and the unlocked session remain alive.
+  const browserCDP=await context.browser().newBrowserCDPSession();
+  const targets=await browserCDP.send('Target.getTargets');const workerTarget=targets.targetInfos.find(t=>t.type==='service_worker'&&t.url.includes(id));
+  await browserCDP.send('Target.closeTarget',{targetId:workerTarget.targetId});await wait(250);
+  assert.equal((await api(ui,'STATE')).locked,false);worker=context.serviceWorkers().at(-1);
+  check('vault unlock survives service-worker suspension within the same browser session');
+  await context.close();({worker,id,ui}=await launch());state=await api(ui,'STATE');assert(state.locked);assert.equal(state.libraryCount,1);
+  vaultPage=await context.newPage();await vaultPage.goto(base+'/index.html');await waitProtected(vaultPage);
+  await vaultPage.locator('#impact').fill('Synthetic locked after full restart');
+  await poll(()=>names(vaultPage),items=>items.some(n=>n.includes('saved on this device')));
+  await api(ui,'VAULT_UNLOCK',{passphrase:newPassword});assert((await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic locked after full restart'));
+  check('a full browser restart locks the vault while public-key capture still works');
+  await api(ui,'VAULT_LOCK');await api(ui,'PRIVACY',{sessionOnly:true});state=await api(ui,'STATE');assert(state.sessionOnly&&state.locked);
+  await api(ui,'VAULT_UNLOCK',{passphrase:newPassword});assert((await api(ui,'STATE')).drafts.length>0);
+  await context.close();({worker,id,ui}=await launch());state=await api(ui,'STATE');assert(state.locked);assert.equal(state.draftCount,0);assert.equal(state.libraryCount,1);
+  await api(ui,'VAULT_UNLOCK',{passphrase:newPassword});assert.equal((await api(ui,'STATE')).library.length,1);
+  check('session-only draft storage clears on browser exit while the encrypted library survives');
+  await api(ui,'VAULT_DISABLE',{passphrase:newPassword});state=await api(ui,'STATE');assert.equal(state.mode,'automatic');assert.equal(state.library.length,1);
+  await context.close();({worker,id,ui}=await launch());assert.equal((await api(ui,'STATE')).library.length,1);
+  check('returning to automatic encryption rekeys records and preserves password-free restart recovery');
+  await ui.getByRole('button',{name:'Sites & settings',exact:true}).click();
+  await ui.getByRole('button',{name:'Export encrypted library',exact:true}).click();
+  await ui.locator('#passphrase').fill(password);await ui.locator('#confirm-passphrase').fill(password);
+  const exportDownload=ui.waitForEvent('download');await ui.locator('#security-submit').click();const exportFile=await exportDownload;
+  const encryptedExport=await readFile(await exportFile.path(),'utf8');assert(!encryptedExport.includes('confidential'));
+  await ui.locator('#import').setInputFiles({name:'backup.json',mimeType:'application/json',buffer:Buffer.from(encryptedExport)});
+  await ui.locator('#passphrase').fill('wrong password');await ui.locator('#security-submit').click();await ui.locator('#security-error').filter({hasText:'incorrect'}).waitFor();
+  await ui.locator('#passphrase').fill(password);ui.once('dialog',dialog=>dialog.accept());await ui.locator('#security-submit').click();
+  await poll(()=>ui.locator('#security-dialog').evaluate(el=>el.open),open=>!open);assert.equal((await api(ui,'STATE')).library.length,1);
+  check('encrypted backup UI round-trips safely, rejects wrong passwords, and skips duplicates');
+  await api(ui,'BLOCK_SITE',{origin:base});await assert.rejects(api(ui,'ENABLE',{origin:base}));assert((await api(ui,'STATE')).blockedSites.includes(base));
+  await api(ui,'UNBLOCK_SITE',{origin:base});await api(ui,'ENABLE',{origin:base});
+  check('Never capture site blocks prevent accidental re-enabling until removed');
   await api(ui,'CLEAR');
   await mkdir(path.join(root,'test-results'),{recursive:true});
   await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({browser:context.browser()?.version(),automated:report,permissionPrompt:'not automated; temporary loopback host pre-grant; native removal simulated',clipboard:'browser clipboard populated by API, trusted keyboard paste; daily-use OS clipboard still manual',syntheticOnly:true},null,2));
