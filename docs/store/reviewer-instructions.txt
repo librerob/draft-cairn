@@ -5,10 +5,10 @@ No account, payment, reviewer credentials, remote service, or client data is nee
 Source and local demo: https://github.com/librerob/draft-cairn
 1. In a source checkout with Node.js 24, run: node scripts/demo.mjs
 2. Open http://127.0.0.1:8765/index.html in Chrome. The extension is inactive until the reviewer enables protection for that site from its toolbar popup and approves the optional host permission.
-3. Type a synthetic answer in Project summary. Wait for the on-page “saved on this device” status. Reload, then open Recovery & library. Preview/copy the saved answer or explicitly restore it into the original empty field.
+3. Type a synthetic answer in Project summary. Wait for the on-page “saved on this device” status. Reload, then open Recovery & library. Preview/copy the saved answer. To test direct restoration, first enable page titles/field details in settings, type a new answer, wait for saving, then reload and restore it into the original empty field.
 4. Existing text is never overwritten. The two Additional detail fields have duplicate identities and support copying rather than direct restoration. Query/fragment pages are copy-only.
 5. Use Copy synthetic long answer in the demo, then paste into Project summary (maxlength 500). An oversized paste is stopped; a labelled larger editor shows the complete original and character counter. The original is saved temporarily for up to one hour if the storage write succeeds. Custom website limits are not detected.
-6. In Answer library, save a synthetic answer with a title and optional project. Search, copy, export/import v1 JSON, and delete it. Exports contain plain-text answers and have an explicit warning.
+6. In Answer library, save a synthetic answer with a title and optional project. Search, copy, export/import v1 JSON, and delete it. Choose an encrypted backup, or readable JSON with an explicit plain-text warning.
 7. Focus a password field or a rich-text/contenteditable field: the on-page status must say not protected in this field. Ordinary autocomplete=off narrative fields are supported; synthetic script-dispatched input/paste events do not save.
 8. Recovery uses oldest-first eviction at 180 records or the byte budget, with a visible notice; library answers are never automatically removed.
 9. Sites & settings controls retention (one day by default on fresh installs; existing choices are preserved), disabling protection, deleting site data, and deleting all extension data.
@@ -22,3 +22,4 @@ Only standard top-level textareas and long ordinary text inputs are supported. P
 - Export/import an encrypted library file; test a wrong passphrase. Backups use their own passphrase.
 - In the on-page larger editor choose Never capture this field. Verify it says not protected and stops saving; allow it again in settings. Block/unblock a site through the popup/settings.
 - Test popup Delete all while locked, using disposable synthetic answers only.
+
