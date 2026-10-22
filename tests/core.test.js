@@ -34,6 +34,12 @@ test('expiry applies to drafts and original pastes, never explicit library answe
   assert.equal(state.drafts.find(d=>d.kind==='paste').expires,3600000);
   C.prune(state,3600001);assert.equal(state.drafts.length,1);C.prune(state,7*C.DAY);assert.equal(state.drafts.length,0);assert.equal(state.library.length,1);
 });
+test('continuous typing produces checkpoints instead of indefinitely replacing history',()=>{
+  const state=C.fresh();
+  for(let n=0;n<20;n++)C.addDraft(state,{key:'continuous',kind:'draft',text:`Synthetic ongoing edit ${n}`},n*5000);
+  assert.equal(state.drafts.length,4);assert.equal(state.drafts[0].text,'Synthetic ongoing edit 19');
+  assert.equal(state.drafts[1].saved,85000);
+});
 test('versioned imports validate every item before mutation; hostile text remains text',()=>{
   const raw=JSON.stringify({format:'draft-cairn-library',version:1,answers:[{title:'<img src=x onerror=alert(1)>',text:'<script>synthetic</script>',project:'Example'}]});
   assert.equal(C.parseImport(raw)[0].text,'<script>synthetic</script>');

@@ -14,7 +14,9 @@
       label:shorten(el.labels?.[0]?.textContent || el.getAttribute('aria-label') || ''),
       form:shorten(el.form?.id || el.form?.getAttribute('name') || ''),
       placeholder:shorten(el.getAttribute('placeholder')), autocomplete:shorten(el.getAttribute('autocomplete') || el.form?.getAttribute('autocomplete')),
-      visible:el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[inert],[aria-hidden="true"]'),
+      visible:Array.from(el.getClientRects()).some(r=>r.width>0 && r.height>0) &&
+        (el.checkVisibility ? el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}) : getComputedStyle(el).visibility !== 'hidden') &&
+        !el.closest('[inert],[aria-hidden="true"],[hidden]'),
       disabled:el.disabled || el.matches(':disabled'), readOnly:el.readOnly,
       private:!!el.closest('[data-cairn-ignore]'), maxLength:el.maxLength};
   }

@@ -54,14 +54,16 @@
     const key = incoming.key;
     const same = state.drafts.filter(d => d.key === key).sort((a,b) => b.saved - a.saved);
     if (same[0]?.text === text) return state;
+    let started = now;
     // Keep the current edit plus up to three earlier snapshots. Do not evict other fields.
-    if (same[0] && now - same[0].saved < 30000 && incoming.kind !== 'paste') {
+    if (same[0] && now - (same[0].started ?? same[0].saved) < 30000 && incoming.kind !== 'paste') {
+      started = same[0].started ?? same[0].saved;
       state.drafts = state.drafts.filter(d => d.id !== same[0].id);
     }
     const earlier = state.drafts.filter(d => d.key === key).sort((a,b) => b.saved - a.saved);
     const remove = new Set(earlier.slice(3).map(d => d.id));
     state.drafts = state.drafts.filter(d => !remove.has(d.id));
-    state.drafts.unshift({...incoming, text, id: crypto.randomUUID(), saved: now,
+    state.drafts.unshift({...incoming, text, id: crypto.randomUUID(), saved: now, started,
       expires: now + (incoming.kind === 'paste' ? Math.min(state.days * DAY, 3600000) : state.days * DAY)});
     return bounded(state);
   }
