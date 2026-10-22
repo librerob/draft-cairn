@@ -9,14 +9,14 @@
   let lastField;
   let host, root, status;
   const fieldStatus = new WeakMap();
-  let ignoredFields=new Set(), excluded=new WeakSet(), focusVersion=0;
+  let ignoredFields=new Set(), excluded=new WeakSet(), focusVersion=0, appearance='system';
   async function excludedField(el) {
     const pageKey=await digest(location.origin+location.pathname);
     const id=await digest(location.origin+pageKey+C.fieldIdentity(describe(el)));
     if(ignoredFields.has(id)){excluded.add(el);return true;}
     return false;
   }
-  function configure(data){ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();}
+  function configure(data){ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;}
   const shorten = s => (s || '').trim().replace(/\s+/g,' ').slice(0,200);
   const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))), b=>b.toString(16).padStart(2,'0')).join('');
   function describe(el) {
@@ -41,10 +41,13 @@
   }
   function mount() {
     if (host?.isConnected) return;
-    host = document.createElement('div');
+    host = document.createElement('div');host.dataset.theme=appearance;
     root = host.attachShadow({mode:'closed'});
     const style = document.createElement('style');
-    style.textContent = `:host{all:initial;font:14px/1.5 system-ui;color:#1c312e}*{box-sizing:border-box}button,textarea{font:inherit}button{padding:10px 14px;border:1px solid #a9b9af;background:#fffdf7;color:#1c312e;border-radius:8px;cursor:pointer}button:focus-visible,textarea:focus-visible{outline:3px solid #126d5a;outline-offset:3px}.pill{position:fixed;bottom:16px;right:16px;z-index:2147483647;background:#143f36;color:white;border:1px solid #517d6f;box-shadow:0 4px 18px #0002;border-radius:10px;padding:9px 14px;max-width:min(380px,90vw);text-align:left}.error{background:#803521}dialog{color:#1c312e;background:#fffdf7;border:1px solid #a9b9af;border-radius:16px;padding:24px;width:min(700px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 70px #0004}dialog::backdrop{background:#102e2a99}h2{font-size:22px;margin:0 0 12px}textarea{display:block;width:100%;height:38vh;min-height:160px;resize:vertical;padding:12px;background:white;color:#1c312e;border:1px solid #83968d;border-radius:8px}label{display:block;font-weight:600;margin-bottom:8px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.primary{background:#143f36;color:white}p{margin:10px 0}small{display:block}`;
+    style.textContent = `:host{all:initial;color-scheme:light;--c-paper:#fff;--c-input:#f0f4f1;--c-ink:#1a211d;--c-muted:#505d55;--c-line:#748279;--c-primary:#226b4c;--c-on-primary:#fff;--c-error:#ffdad5;--c-on-error:#6e1712;--c-scrim:#101c1673;font:14px/1.6 'Segoe UI',Roboto,Arial,sans-serif;color:var(--c-ink)}
+:host([data-theme=dark]){color-scheme:dark;--c-paper:#1a211c;--c-input:#202923;--c-ink:#e1e9e2;--c-muted:#b2c0b5;--c-line:#85978a;--c-primary:#97d5b0;--c-on-primary:#093922;--c-error:#62302a;--c-on-error:#ffdad5;--c-scrim:#0009}
+@media(prefers-color-scheme:dark){:host(:not([data-theme=light]):not([data-theme=dark])){color-scheme:dark;--c-paper:#1a211c;--c-input:#202923;--c-ink:#e1e9e2;--c-muted:#b2c0b5;--c-line:#85978a;--c-primary:#97d5b0;--c-on-primary:#093922;--c-error:#62302a;--c-on-error:#ffdad5;--c-scrim:#0009}}
+*{box-sizing:border-box}button,textarea{font:inherit}button{min-height:40px;padding:9px 16px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-primary);border-radius:999px;cursor:pointer;font-size:13px;font-weight:600}button:hover{background:var(--c-input)}button:focus-visible,textarea:focus-visible{outline:3px solid var(--c-primary);outline-offset:3px}.pill{position:fixed;bottom:16px;right:16px;z-index:2147483647;background:var(--c-paper);color:var(--c-primary);border:1px solid var(--c-line);box-shadow:0 3px 16px #0002;border-radius:999px;padding:10px 16px;max-width:min(380px,90vw);text-align:left;font-size:12px;font-weight:500}.error{background:var(--c-error);color:var(--c-on-error)}dialog{color:var(--c-ink);background:var(--c-paper);border:1px solid var(--c-line);border-radius:24px;padding:24px;width:min(700px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 70px #0004}dialog::backdrop{background:var(--c-scrim)}h2{font-size:22px;line-height:1.35;font-weight:500;margin:0 0 12px}textarea{display:block;width:100%;height:38vh;min-height:160px;resize:vertical;padding:14px;background:var(--c-input);color:var(--c-ink);border:1px solid var(--c-line);border-radius:12px;line-height:1.65}label{display:block;font-weight:600;margin-bottom:8px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.primary{background:var(--c-primary);color:var(--c-on-primary)}.primary:hover{background:var(--c-primary)}p{margin:10px 0}small{display:block;color:var(--c-muted)}@media(forced-colors:active){.pill,.primary,dialog{border:1px solid ButtonText}}`;
     root.append(style);
     status = document.createElement('button');
     status.className = 'pill'; status.type = 'button'; status.setAttribute('aria-live','polite');

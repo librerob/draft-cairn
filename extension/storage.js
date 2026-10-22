@@ -10,7 +10,7 @@ const size=value=>encoder.encode(JSON.stringify(value)).length;
 const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(value))),b=>b.toString(16).padStart(2,'0')).join('');
 function config(state) {
   const s=C.privacyDefaults(state);
-  return {version:1,days:s.days,metadata:s.metadata,sessionOnly:s.sessionOnly,sites:[...s.sites],
+  return {version:1,days:s.days,metadata:s.metadata,sessionOnly:s.sessionOnly,appearance:s.appearance,sites:[...s.sites],
     blockedSites:[...s.blockedSites],ignoredFields:[...s.ignoredFields],evicted:s.evicted || 0};
 }
 function blank(state=C.fresh()) {return {...config(state),v:3,generation:crypto.randomUUID(),mode:'automatic',drafts:[],library:[],sessionRef:null};}

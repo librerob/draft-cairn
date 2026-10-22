@@ -60,6 +60,14 @@ async function clickAccessible(page,predicate) {
   const q=model.content;await page.mouse.click((q[0]+q[2]+q[4]+q[6])/4,(q[1]+q[3]+q[5]+q[7])/4);
 }
 
+async function accessibleStyle(page,role) {
+  const session=await context.newCDPSession(page),tree=await session.send('Accessibility.getFullAXTree');
+  const node=tree.nodes.find(n=>n.role?.value===role);assert(node?.backendDOMNodeId);
+  await session.send('DOM.getDocument',{depth:0});await session.send('CSS.enable');
+  const {nodeIds}=await session.send('DOM.pushNodesByBackendIdsToFrontend',{backendNodeIds:[node.backendDOMNodeId]});
+  const {computedStyle}=await session.send('CSS.getComputedStyleForNode',{nodeId:nodeIds[0]});
+  return Object.fromEntries(computedStyle.map(p=>[p.name,p.value]));
+}
 async function paste(page,selector,text,start,end){
   await page.locator(selector).focus();
   await page.locator(selector).evaluate((el,{start,end})=>el.setSelectionRange(start ?? 0,end ?? el.value.length),{start,end});
@@ -215,8 +223,54 @@ try {
   await ui.reload();await ui.waitForFunction(()=>document.getElementById('summary').textContent.includes('revisions'));
   // Documentation screenshots contain only fixture data and use the unmodified shipped UI.
   const screenshots=path.join(root,'test-results','screenshots');await mkdir(screenshots,{recursive:true});
+  // Check system-following and explicit overrides on real extension pages.
+  await ui.emulateMedia({colorScheme:'light'});
+  await poll(()=>ui.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),v=>v==='light');
   await ui.screenshot({path:path.join(screenshots,'recovery.png')});
   await ui.getByRole('button',{name:'Answer library',exact:true}).click();await ui.screenshot({path:path.join(screenshots,'library.png')});
+  await ui.emulateMedia({colorScheme:'dark'});
+  await poll(()=>ui.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),v=>v==='dark');
+  await ui.screenshot({path:path.join(screenshots,'library-dark.png')});
+  await ui.getByRole('button',{name:'Recovery drafts',exact:true}).click();await ui.screenshot({path:path.join(screenshots,'recovery-dark.png')});
+  check('workspace follows live system light/dark changes');
+  await ui.getByRole('button',{name:'Sites & settings',exact:true}).click();
+  await ui.locator('#appearance').selectOption('light');
+  await poll(()=>ui.evaluate(()=>document.documentElement.dataset.theme),v=>v==='light');
+  assert.equal(await ui.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'light');
+  await ui.reload();await ui.waitForFunction(()=>document.getElementById('summary').textContent.includes('revisions'));
+  assert.equal(await ui.evaluate(()=>document.documentElement.dataset.theme),'light');
+  await ui.getByRole('button',{name:'Sites & settings',exact:true}).click();await ui.locator('#appearance').selectOption('dark');
+  await poll(()=>ui.evaluate(()=>document.documentElement.dataset.theme),v=>v==='dark');
+  await ui.screenshot({path:path.join(screenshots,'settings-dark.png')});
+  const themedSite=await context.newPage();await themedSite.emulateMedia({colorScheme:'light'});await themedSite.goto(base+'/index.html?theme=synthetic');await waitProtected(themedSite);
+  await themedSite.locator('#impact').focus();await clickAccessible(themedSite,name=>name.startsWith('Draft Cairn ·'));
+  await poll(()=>accessibleStyle(themedSite,'dialog'),s=>s['background-color']==='rgb(26, 33, 28)');
+  await ui.locator('#appearance').selectOption('light');
+  await poll(()=>accessibleStyle(themedSite,'dialog'),s=>s['background-color']==='rgb(255, 255, 255)');
+  await themedSite.keyboard.press('Escape');await themedSite.close();
+  check('on-page editor follows explicit appearance changes independently of the website theme');
+  await ui.locator('#appearance').selectOption('dark');
+
+  const popup=await context.newPage();await popup.setViewportSize({width:380,height:600});
+  await popup.goto(`chrome-extension://${id}/popup.html`);
+  await poll(()=>popup.evaluate(()=>document.documentElement.dataset.theme),v=>v==='dark');
+  assert.equal(await popup.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'dark');
+  await ui.locator('#appearance').selectOption('light');
+  await poll(()=>popup.evaluate(()=>document.documentElement.dataset.theme),v=>v==='light');
+  check('explicit appearance overrides persist after reload and synchronize with the popup');
+  await popup.screenshot({path:path.join(screenshots,'popup-light.png')});
+  await ui.locator('#appearance').selectOption('dark');await poll(()=>popup.evaluate(()=>document.documentElement.dataset.theme),v=>v==='dark');
+  await popup.screenshot({path:path.join(screenshots,'popup-dark.png')});
+  await ui.getByRole('button',{name:'Answer library',exact:true}).click();await ui.getByRole('button',{name:'Save an answer',exact:true}).click();
+  const editorStyle=await ui.locator('#answer-dialog').evaluate(el=>({background:getComputedStyle(el).backgroundColor,scheme:getComputedStyle(el).colorScheme}));
+  assert.equal(editorStyle.background,'rgb(26, 33, 28)');assert.equal(editorStyle.scheme,'dark');await ui.locator('#close-editor').click();
+  await ui.emulateMedia({forcedColors:'active',reducedMotion:'reduce'});
+  assert.equal(await ui.evaluate(()=>matchMedia('(forced-colors:active)').matches),true);
+  const forcedButton=await ui.locator('#new-answer').evaluate(el=>getComputedStyle(el).borderTopStyle);assert.equal(forcedButton,'solid');
+  await ui.emulateMedia({forcedColors:'none',reducedMotion:'no-preference'});
+  check('dialogs use the dark palette; high-contrast and reduced-motion preferences remain usable');
+  await popup.close();await ui.getByRole('button',{name:'Sites & settings',exact:true}).click();await ui.locator('#appearance').selectOption('system');
+  await ui.getByRole('button',{name:'Recovery drafts',exact:true}).click();
   await ui.setViewportSize({width:390,height:844});assert.equal(await ui.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);check('workspace fits a 390px viewport');
   await api(ui,'DISABLE',{origin:base,erase:true});assert(!(await api(ui,'STATE')).drafts.some(d=>d.origin===base));
   await api(ui,'CLEAR');state=await api(ui,'STATE');assert.equal(state.library.length+state.drafts.length+state.sites.length,0);
@@ -295,6 +349,8 @@ try {
   state=await api(ui,'STATE');assert(state.locked);assert.equal(state.library.length+state.drafts.length,0);assert.equal(state.libraryCount,1);
   await assert.rejects(api(ui,'VAULT_UNLOCK',{passphrase:'wrong synthetic password'}));assert((await api(ui,'STATE')).locked);
   check('locking scrubs rendered answers and unsaved editors; incorrect passwords reveal no records');
+  await api(ui,'THEME_SET',{appearance:'dark'});assert.equal((await api(ui,'THEME_GET')).appearance,'dark');assert((await api(ui,'STATE')).locked);
+  await api(ui,'THEME_SET',{appearance:'system'});check('appearance changes remain available while the vault is locked');
   const lockedRefs=await worker.evaluate(async()=>(await globalThis.testStore.publicState()).drafts.map(d=>d.ref));
   await vaultPage.locator('#impact').fill('Synthetic capture while locked');
   await poll(()=>worker.evaluate(async()=>(await globalThis.testStore.publicState()).drafts.map(d=>d.ref)),refs=>refs.some(ref=>!lockedRefs.includes(ref)));

@@ -1,3 +1,4 @@
+import './theme.js';
 import './core.js';
 import {encryptExport,decryptExport} from './crypto.js';
 import {$,node,api,notice,action,copy,time} from './ui.js';
@@ -15,7 +16,7 @@ function renderDrafts() {
   const q=$('draft-search').value.toLowerCase();$('drafts').replaceChildren();
   if(state.locked){$('drafts').append(empty('Your vault is locked.','Saving continues on enabled sites. Unlock to read, search or restore your answers.'));return;}
   const list=state.drafts.filter(d=>[d.text,d.origin,d.field.label,d.title].join(' ').toLowerCase().includes(q));
-  if(!list.length)$('drafts').append(empty('A fresh start, with a safety net.',q ? 'No drafts match your search.' : 'Enable protection from the extension popup before you write. Supported answers will appear here after saving.'));
+  if(!list.length)$('drafts').append(empty('No recovery drafts yet.',q ? 'No drafts match your search.' : 'Enable protection from the extension popup before you write. Supported answers will appear here after saving.'));
   for(const d of list.sort((a,b)=>b.saved-a.saved)) {
     const card=node('article',undefined,'card draft');
     card.append(node('span',d.kind === 'paste' ? 'Original paste · up to 1 hour' : 'Recovery revision','badge'),node('h3',d.field.label || 'Untitled field'),node('div',d.title,'meta'),node('div',`${d.origin} · ${time(d.saved)}`,'meta'),node('pre',d.text));
@@ -40,7 +41,7 @@ function renderLibrary() {
   const q=$('library-search').value.toLowerCase();$('answers').replaceChildren();
   if(state.locked){$('answers').append(empty('Your library is locked.','Unlock your vault to read or change library answers.'));return;}
   const list=state.library.filter(a=>[a.title,a.project,a.text].join(' ').toLowerCase().includes(q));
-  if(!list.length)$('answers').append(empty('Keep the answers you return to.',q ? 'No answers match your search.' : 'Save an approved description, project summary, or useful paragraph. You decide what belongs here.'));
+  if(!list.length)$('answers').append(empty('No library answers yet.',q ? 'No answers match your search.' : 'Save an approved description, project summary, or useful paragraph. You decide what belongs here.'));
   for(const a of list) {
     const card=node('article',undefined,'card draft');const controls=node('div',undefined,'row');
     card.append(node('span',a.project || 'Ungrouped','badge'),node('h3',a.title),node('div',`Saved ${time(a.saved)}`,'meta'),node('pre',a.text));

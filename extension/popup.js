@@ -1,3 +1,4 @@
+import './theme.js';
 import './core.js';
 import {$,node,api,notice} from './ui.js';
 let tab, origin, enabled=false;
@@ -12,8 +13,8 @@ async function render() {
   $('toggle').textContent=enabled ? 'Turn protection off' : 'Enable for this site';$('toggle').disabled=!origin || state.blockedSites.includes(origin);
   $('block-site').disabled=!origin || state.blockedSites.includes(origin);
   if(state.blockedSites.includes(origin)){$('status').textContent='Never capture · blocked';$('detail').textContent='Remove this block in workspace settings before enabling protection.';}
-  const drafts=state.drafts.filter(d=>d.origin === origin).sort((a,b)=>b.saved-a.saved).slice(0,3);
-  $('count').textContent=drafts.length ? 'This site' : '';
+  const drafts=state.drafts.filter(d=>d.origin === origin).sort((a,b)=>b.saved-a.saved).slice(0,2);
+  $('count').textContent=state.siteDraftCount ? `${state.siteDraftCount} saved` : '';
   $('recent').replaceChildren();
   if(state.locked)$('recent').append(node('p',`Vault locked · ${state.siteDraftCount} revisions for this site. Saving continues. Open the workspace to unlock.`,'muted'));
   else if(!drafts.length)$('recent').append(node('p','No saved answers here yet. After enabling protection, type in a supported field.','muted'));

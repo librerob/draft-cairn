@@ -65,7 +65,7 @@ async function handle(m,sender) {
   if(!m || typeof m.type!=='string')throw new Error('Invalid request.');
   if(sender.tab && !trusted(sender)) {
     const {origin,state,url}=await activeOrigin(sender);
-    if(m.type==='HELLO')return {active:true,ignoredFields:state.ignoredFields.filter(f=>f.origin===origin).map(f=>f.id)};
+    if(m.type==='HELLO')return {active:true,appearance:state.appearance,ignoredFields:state.ignoredFields.filter(f=>f.origin===origin).map(f=>f.id)};
     if(!['CAPTURE','IGNORE_FIELD'].includes(m.type))throw new Error('Unavailable from this page.');
     const f=m.field;validateField(f);
     const pageKey=await digest(origin+url.pathname),fieldKey=await digest(origin+pageKey+C.fieldIdentity(f));
@@ -86,6 +86,11 @@ async function handle(m,sender) {
   }
   if(!trusted(sender))throw new Error('Unavailable from this context.');
   switch(m.type) {
+    case 'THEME_GET':return {appearance:(await S.publicState()).appearance};
+    case 'THEME_SET': {
+      if(!['system','light','dark'].includes(m.appearance))throw new Error('Choose system, light or dark appearance.');
+      await S.updateIndex(state=>{state.appearance=m.appearance;});await recheckPages();return true;
+    }
     case 'STATE':return {...await S.view(m.origin),lastError:lastError || (await chrome.storage.session.get('lastError')).lastError || ''};
     case 'ACK_ERROR':lastError='';await chrome.storage.session.remove('lastError');await chrome.action.setBadgeText({text:''});return true;
     case 'ENABLE':{const origin=C.originOf(m.origin);await enable(origin,m.tabId);await chrome.storage.session.remove(`enable-${m.tabId}`);return true;}
