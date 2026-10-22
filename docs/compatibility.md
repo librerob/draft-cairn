@@ -19,3 +19,5 @@ Origin checks include ports. Chrome host permissions ignore ports, so the browse
 The 180-record/6 MiB recovery budget is rolling: oldest recovery records can be evicted before expiry, with a visible notice. Explicit library answers are not evicted. New library writes reserve space for recovery.
 
 Expiry is enforced on reads and cleanup attempts while Chrome runs, not while the browser is closed. Site deletion keeps explicitly saved library answers. Clearing extension data does not erase exports, OS clipboard history, browser-profile backups, or the website's own copies.
+
+Direct restoration also requires saving page titles and field details in settings before capture. New installations leave this off and use copy-only recovery. Enabling the option does not recreate descriptors for older drafts. Vault reading/restoration requires unlocking; capture can continue while locked.

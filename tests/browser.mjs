@@ -204,7 +204,7 @@ try {
   await context.close();({worker,id,ui}=await launch());assert.equal((await api(ui,'STATE')).library.length,durable);
   assert.deepEqual((await api(ui,'STATE')).drafts.map(d=>d.id).sort(),durableDraftIds);check('drafts and library survive a real browser process restart');
   await worker.evaluate(async()=>{
-    const state=await globalThis.testStore.load(),template=state.drafts[0],now=Date.now();state.evicted=0;
+    const state=await globalThis.testStore.load(),template=state.drafts[0],now=Date.now();state.evicted=0;state.library=state.library.filter(a=>a.title!=='Synthetic unrelated successful write');
     state.drafts=[
       {...template,id:'curated-summary',key:'curated-summary',title:'Synthetic workshop application',field:{...template.field,id:'summary',label:'Project summary'},text:'Synthetic demonstration answer: we are planning a community workshop with accessible spaces, practical activities, and time for participants to share their ideas.\n\nThis saved revision is ready to copy back after a page reload.',saved:now-120000},
       {...template,id:'curated-impact',key:'curated-impact',title:'Synthetic workshop application',field:{...template.field,id:'impact',label:'Who will benefit?'},text:'Synthetic demonstration answer: local residents will help choose the workshop topics. We will offer quiet sessions and accessible materials, then review participant feedback before planning the next programme.',saved:now-60000}

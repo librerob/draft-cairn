@@ -2,6 +2,18 @@
 
 22 October 2026 · synthetic fixtures only
 
+## 0.2.0 vault/privacy coverage
+
+**15 Node test groups and 48 Chromium scenarios passed** on runtime commit `383687cf7ab5d49e28fd438331032b8dfd9f83f7`. [Passing runtime run](https://github.com/librerob/draft-cairn/actions/runs/39849421888) · [machine-readable scenarios](validation-results-0.2.0.json). Browser: Chromium 151.0.7922.34 on Ubuntu 24.04. Static, manifest, assets and deterministic packaging checks passed in the same run.
+
+The new scenarios exercise real UI vault setup and encrypted backup import/export, incorrect passwords, locked capture, explicit lock scrubbing, changed passphrases, worker termination/restart while unlocked, complete browser process restart, session-only draft loss with library persistence, return to automatic encryption, trusted field exclusion across reload, site blocking, both legacy migrations, and injected transaction abort during a near-capacity vault migration. A failed migration preserves the prior records, index and automatic key. A successful conversion fits more than 5 MiB of plaintext without Chrome storage.local duplication. Locked conversion to session-only storage evicts oldest revisions to meet its smaller budget. Delete all works without unlocking.
+
+At 180 records and 5,533,199 plaintext bytes, the largest write for a new small draft was 84,653 bytes; observed end-to-end time was 420 ms including debounce and polling. This is one synthetic observation, not a performance guarantee. The operational index and answer records are encrypted separately. The index's automatic profile key is intentionally available while the answer vault is locked.
+
+Unit coverage includes large hybrid-encrypted payloads, fresh IV/key wrapping, wrong passwords, authenticated-label mismatch, tampering, passphrase changes, encrypted export validation, bounded import KDF costs, privacy defaults and text-free revision planning. There is no independent cryptographic audit.
+
+The test harness uses the shipped modules, with static test bindings and a localhost host pre-grant only in its temporary copy. It stores no real user data or browser traces. Permission prompts/revocation, daily-use OS clipboard, Windows/macOS native behavior, abrupt crashes and intended application portals remain manual gates. Documentation screenshots are synthetic fixtures from the actual UI. Earlier release results below are historical evidence.
+
 ## 0.1.2 review regression coverage
 
 **10 Node rule-test groups and 32 Chromium scenarios passed** on runtime commit `e96ab132f1c77f40c4747d20d424ba122cbe3e55`. [Passing run](https://github.com/librerob/draft-cairn/actions/runs/39839798197) · [machine-readable results](validation-results-0.1.2.json). Static/syntax, manifest, asset checks, and deterministic packaging passed too.
@@ -20,9 +32,9 @@ Verified on commit `370d004dddf9b170a06c1ab44ec26aac92cd1a43`: **8 unit groups a
 
 The Windows and Linux release packages were compared byte for byte. SHA-256: `c84cd3c63a3c8e488c07d1018b2797066fe0d31237638d946ac54861faee6b3a`. The local demo's expiry/return flow was also manually verified in the in-app Chromium browser; this was a demo check, not a local extension installation test.
 
-## Local checks
+## Historical local checks
 
-Eight Node test groups pass: field exclusion, paste selection/UTF-16 arithmetic, conservative matching, revision/storage bounds, expiry, atomic import validation and hostile strings, and URL-origin handling. Static checks pass for JavaScript syntax, manifest permissions/incognito, runtime paths, safe text rendering, and absence of outbound request APIs. Reproducible packaging is checked by building twice and comparing SHA-256.
+The original eight Node test groups passed: field exclusion, paste selection/UTF-16 arithmetic, conservative matching, revision/storage bounds, expiry, atomic import validation and hostile strings, and URL-origin handling. Static checks pass for JavaScript syntax, manifest permissions/incognito, runtime paths, safe text rendering, and absence of outbound request APIs. Reproducible packaging is checked by building twice and comparing SHA-256.
 
 The Windows host has Chrome installed, but application-control policy blocked running the official downloaded Chrome for Testing binary. No policy was bypassed. Local real-extension browser integration and restart could not be verified here; GitHub Actions runs that suite on Linux Chromium instead.
 
@@ -37,7 +49,7 @@ The workflow uploads a compact result summary, synthetic screenshots, and the de
 ## Manual checks still required
 
 - The actual native optional host-permission prompt, denial, Chrome UI revocation, and the unmodified ZIP in a fresh daily-use Chrome profile.
-- OS clipboard paste/copy behavior (automated integration dispatches synthetic clipboard events), keyboard-only focus flow, screen-reader output, zoom/high contrast, and portal-specific interference.
+- OS clipboard paste/copy behavior (automated integration uses trusted keyboard paste with a browser-populated clipboard), keyboard-only focus flow, screen-reader output, zoom/high contrast, and portal-specific interference.
 - Hard crashes, abrupt device shutdown, true remote session expiry, framework-controlled forms, repeated client records at the same route, and compatibility on intended grant/application portals.
 - Independent privacy/security review; Windows/macOS native runtime coverage.
 

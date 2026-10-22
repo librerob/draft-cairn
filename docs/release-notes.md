@@ -1,19 +1,21 @@
-Draft Cairn 0.1.2 — recovery reliability and local storage fixes.
+Draft Cairn 0.2.0 preview — optional passphrase vault and privacy controls.
 
-New saves evict the oldest recovery records when the 180-record or 6 MiB plaintext budget fills, with a visible eviction notice. Explicit library answers are never evicted; new library writes reserve room for recovery.
+Automatic encryption remains the password-free default. Users can opt into a passphrase vault: new drafts continue saving while locked, and reading, search, restoration and library changes require unlocking. A forgotten passphrase cannot be reset. Changing the passphrase or returning to automatic encryption preserves existing answers through atomic rekeying.
 
-Capture ignores synthetic input/paste events. Status follows the focused field and warns when an editable field is unsupported. Ordinary autocomplete=off forms and narrative labels such as “payment schedule” are supported, while specific credential/payment hints remain excluded.
+- The vault uses per-record AES-256-GCM with RSA-OAEP-3072 key wrapping. PBKDF2-SHA-256 protects the private key. Unlock survives worker suspension and clears on explicit lock or browser/extension session end.
+- The operational index uses a separate automatic key in the profile. The vault protects answer contents in copied files; it does not hide operational metadata from a profile holder or protect an actively compromised browser/device. See PRIVACY.md.
+- Fresh installations default to one-day recovery without page titles/field details. Existing choices are preserved. Minimal-metadata drafts are copy-only; enabling page details permits conservative direct restoration.
+- Optional session-only recovery keeps encrypted drafts in browser-session memory, with a smaller 2 MiB recovery budget. The persistent library remains. Chrome must fully exit to end its session; closing the last window can leave background Chrome running.
+- Block sites from the popup or exclude fields in the larger on-page editor. Manage exclusions in settings. Field exclusion deletes its recovery revisions; blocking a site keeps earlier drafts unless deleted.
+- Export a passphrase-encrypted library backup or explicitly choose readable JSON. Backup passwords are separate from the vault. Clipboard managers/history and exported copies remain outside lock and wipe controls.
+- Delete all is also available in the popup, including while locked. Persistent record/index/key updates are atomic. Migration supports old plaintext and v0.1.2 encrypted stores without duplicating a full dataset inside Chrome storage.local's quota.
 
-- Pending site choices survive popup closure; the worker completes them when access is granted and discards expired choices.
-- Content-script registrations remain in place when host patterns match and update in place when they change.
-- Persisted answers, metadata, and settings use AES-256-GCM with an automatic non-extractable key in extension-origin IndexedDB. Legacy plaintext migrates only after the encrypted commit succeeds. This is not a password-protected vault; profile/device control can still expose answers.
-- Saves write changed encrypted records and a small encrypted index. Failed index commits preserve earlier data and remove staged records.
-- Failure badges remain until acknowledged. Oversized captures have capture-specific error wording. Delete all removes encrypted records and the local key.
+Validation: 15 unit groups, 48 real Chromium integration scenarios, static/manifest/assets checks and reproducible packaging passed. Tests cover locked capture, real worker/browser restart, UI scrubbing, wrong passwords, exports, exclusions, legacy upgrades and failed near-capacity migration rollback. See docs/validation.md and validation-results-0.2.0.json for evidence and limits. There has been no independent cryptographic/security audit.
 
-Validation includes Node/static checks, real Chromium integration, browser-process restart, failure injection, and deterministic packaging. Integration uses a temporary loopback host pre-grant and trusted keyboard paste with a browser-populated clipboard. See docs/validation.md for actual results and limitations. Native permission prompts/revocation, daily-use OS clipboard behavior, and two or three intended portals still require supervised synthetic-data checks.
+Native Chrome permission approval/denial/revocation, daily-use OS clipboard behavior and two or three intended portals still need supervised synthetic-data checks before store submission. Automated integration pre-grants localhost in a temporary test copy. The shipping manifest keeps all hosts optional.
 
-Download and extract the extension ZIP, verify it against SHA256SUMS, and load the extracted folder via Chrome's Developer mode / Load unpacked. Full source and policies are in the repository.
+Extract the extension ZIP, verify SHA256SUMS, and load its manifest folder using chrome://extensions → Developer mode → Load unpacked. The separate store kit contains the install ZIP, icon, images, listing copy and reviewer steps. Upload only the inner extension ZIP as the package.
 
-Limits: standard top-level textareas and long ordinary text inputs only; no rich text, frames, incognito, or custom/server-side length detection. Latest unsaved keystrokes can be lost. Query/fragment pages remain copy-only because different applications may share a path and differ only by parameters the extension does not retain. Chrome grants host access across ports; capture separately checks the exact enabled origin. Keep a separate copy of important work.
+Limits: standard top-level textareas and long ordinary text inputs; no rich text, frames or incognito. Unsupported fields visibly warn. Latest unsaved keystrokes may be lost. Direct restoration is empty-field-only, unique-match-only, and unavailable for query/fragment pages or drafts without field details. Keep a separate copy of important work.
 
-This release has not been submitted to the Chrome Web Store. No paid service or fee has been activated.
+This release has not been submitted to the Chrome Web Store. No paid service, registration or fee has been activated.
