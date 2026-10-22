@@ -258,12 +258,14 @@ export async function changePassphrase(oldPassphrase,newPassphrase) {
   await updateIndex(next=>{next.vault=wrapped;});
 }
 export async function erase() {
-  // Persist an empty index first; a blocked database deletion cannot expose old data.
-  await ensure();const before=await effective();
-  await persist(blank(),new Map(),before);
+  // Wiping must work even if the old index/key is damaged or the vault is locked.
+  // Clear every store atomically before attempting database-file deletion.
+  await D.reset(blank());
+  catalog=undefined;initializing=undefined;autoCache=undefined;privateCache=null;publicCache=null;plaintext.clear();
   await D.erase();
   await chrome.storage.session.clear();
-  await chrome.storage.local.remove(['state','cairn-v2']);
+  const local=await chrome.storage.local.get(null);
+  await chrome.storage.local.remove(Object.keys(local).filter(k=>k==='state' || k==='cairn-v2' || k.startsWith('cairn-record-')));
   // The legacy key/database is absent after migration, but clear it if cleanup was interrupted.
   await new Promise((resolve,reject)=>{const r=indexedDB.deleteDatabase('cairn-keys');r.onsuccess=resolve;r.onerror=()=>reject(new Error('Local storage key deletion failed.'));r.onblocked=()=>reject(new Error('Local storage key deletion is blocked.'));});
   catalog=undefined;initializing=undefined;autoCache=undefined;privateCache=null;publicCache=null;plaintext.clear();

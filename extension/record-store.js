@@ -47,3 +47,12 @@ export async function erase() {
     request.onblocked=()=>reject(new Error('Local storage deletion is blocked. Close other extension pages and try again.'));
   });
 }
+export async function reset(index) {
+  const db=await database();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction(['meta','records','keys'],'readwrite');
+    for(const name of ['meta','records','keys'])tx.objectStore(name).clear();
+    tx.objectStore('meta').put(index,'index');
+    tx.oncomplete=resolve;tx.onabort=tx.onerror=()=>reject(new Error('Local storage deletion failed. Existing data was preserved.'));
+  });
+}

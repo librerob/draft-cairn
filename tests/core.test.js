@@ -71,3 +71,17 @@ test('site identifiers and patterns omit query, fragments and credentials',()=>{
   assert.equal(C.hostPattern('https://example.test:444'),'https://example.test/*');
   assert.throws(()=>C.originOf('file:///tmp/example'));assert.throws(()=>C.originOf('chrome://settings'));
 });
+test('privacy defaults preserve upgrades while minimizing new installations',()=>{
+  const fresh=C.fresh();assert.equal(fresh.days,1);assert.equal(fresh.metadata,false);assert.equal(fresh.sessionOnly,false);
+  const old={version:1,days:7,sites:[],drafts:[],library:[]},upgraded=C.privacyDefaults(old);
+  assert.equal(upgraded.days,7);assert.equal(upgraded.metadata,true);assert.deepEqual(upgraded.blockedSites,[]);
+  const minimal=C.minimalDraft({title:'Sensitive title',field:{label:'Sensitive label',id:'sensitive'},restorable:true,text:'Kept answer'});
+  assert.equal(minimal.text,'Kept answer');assert.equal(minimal.title,'');assert.deepEqual(minimal.field,{label:''});assert.equal(minimal.restorable,false);
+});
+test('locked revision planning needs no answer text and keeps bounded checkpoints',()=>{
+  let drafts=[];for(let i=0;i<8;i++)drafts=C.planDraft(drafts,{id:String(i),key:'same',kind:'draft',ref:String(i)},1,100000+i*31000);
+  assert.equal(drafts.length,4);assert.deepEqual(drafts.map(d=>d.id),['7','6','5','4']);
+  const next=C.planDraft(drafts,{id:'8',key:'same',kind:'draft',ref:'8'},1,drafts[0].saved+1000);
+  assert.equal(next.length,4);assert.equal(next[0].started,drafts[0].started);assert(!next.some(d=>d.id==='7'));
+  const paste=C.planDraft([],{id:'paste',kind:'paste',key:'paste'},7,100000)[0];assert.equal(paste.expires,3700000);
+});
