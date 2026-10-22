@@ -139,7 +139,11 @@ $('disable-vault').onclick=()=>security('disable');$('change-passphrase').onclic
 $('export-encrypted').onclick=()=>security('export');
 $('lock-vault').onclick=async()=>{try{scrub();await api('VAULT_LOCK');await refresh();notice('Vault locked. Saving continues on enabled sites.');}catch(e){notice(e.message,true);}};
 $('security-close').onclick=()=>$('security-dialog').close();
-$('security-dialog').addEventListener('close',()=>{$('security-form').reset();$('security-error').textContent='';pendingImport='';});
+$('security-dialog').addEventListener('close',()=>{
+  // A queued close event must not clear a newly opened import form.
+  if($('security-dialog').open)return;
+  $('security-form').reset();$('security-error').textContent='';pendingImport='';
+});
 async function importLibrary(raw) {
   const validated=Cairn.parseImport(raw);if(!confirm(`Import ${validated.length} answers into this library?`))return;
   await api('IMPORT',{raw});notice('Library imported. Exact duplicates were skipped.');
@@ -147,12 +151,13 @@ async function importLibrary(raw) {
 $('security-form').onsubmit=async e=>{
   e.preventDefault();const button=$('security-submit');button.disabled=true;
   const mode=securityMode,passphrase=$('passphrase').value,generation=securityGeneration;
+  let exportRaw;
   try {
     if(['enable','change','export'].includes(mode) && passphrase!==$('confirm-passphrase').value)throw new Error('The new passphrases do not match.');
     if(mode==='export') {
       const raw=await encryptExport(libraryJSON(),passphrase);
       if(generation!==securityGeneration || state?.locked)throw new Error('Vault is locked. Export cancelled.');
-      download(raw,'draft-cairn-library-encrypted-v1.json');
+      exportRaw=raw;
     }
     else if(mode==='import') {
       const raw=await decryptExport(pendingImport,passphrase);
@@ -160,7 +165,11 @@ $('security-form').onsubmit=async e=>{
       await importLibrary(raw);
     }
     else await api({enable:'VAULT_ENABLE',unlock:'VAULT_UNLOCK',disable:'VAULT_DISABLE',change:'VAULT_CHANGE'}[mode],{passphrase,oldPassphrase:$('old-passphrase').value,acknowledged:$('acknowledge').checked});
-    $('security-dialog').close();await refresh();notice(mode==='export' ? 'Encrypted backup exported. Keep its passphrase separately.' : 'Done.');
+    $('security-dialog').close();await refresh();
+    // Start the download after closing/resetting the passphrase form. A download
+    // completion can immediately trigger another operation, including an import.
+    if(exportRaw)download(exportRaw,'draft-cairn-library-encrypted-v1.json');
+    notice(mode==='export' ? 'Encrypted backup exported. Keep its passphrase separately.' : 'Done.');
   }catch(error){$('security-error').textContent=error.message;}finally{button.disabled=false;}
 };
 $('import').onchange=async()=>{
