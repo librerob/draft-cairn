@@ -59,7 +59,7 @@ async function cleanupMemory(index) {
   if(remove.length)await chrome.storage.session.remove(remove);
 }
 async function ensure() {
-  if(catalog)return;
+  if(catalog){await cleanupLegacy();return;}
   if(!initializing)initializing=(async()=>{
     const index=await D.get('meta','index');
     if(index) {

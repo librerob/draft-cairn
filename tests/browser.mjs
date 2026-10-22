@@ -277,10 +277,11 @@ try {
   state=await api(ui,'STATE');assert(state.locked);assert.equal(state.library.length+state.drafts.length,0);assert.equal(state.libraryCount,1);
   await assert.rejects(api(ui,'VAULT_UNLOCK',{passphrase:'wrong synthetic password'}));assert((await api(ui,'STATE')).locked);
   check('locking scrubs rendered answers and unsaved editors; incorrect passwords reveal no records');
+  const lockedRefs=await worker.evaluate(async()=>(await globalThis.testStore.publicState()).drafts.map(d=>d.ref));
   await vaultPage.locator('#impact').fill('Synthetic capture while locked');
-  await poll(()=>names(vaultPage),items=>items.some(n=>n.includes('saved on this device')));
+  await poll(()=>worker.evaluate(async()=>(await globalThis.testStore.publicState()).drafts.map(d=>d.ref)),refs=>refs.some(ref=>!lockedRefs.includes(ref)));
   state=await api(ui,'STATE');assert(state.locked);assert(state.draftCount>0);
-  await api(ui,'VAULT_UNLOCK',{passphrase:password});state=await api(ui,'STATE');assert(state.drafts.some(d=>d.text==='Synthetic capture while locked'));
+  await api(ui,'VAULT_UNLOCK',{passphrase:password});state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic capture while locked'));
   check('trusted typing continues to encrypt while locked and decrypts after unlocking');
   await api(ui,'VAULT_CHANGE',{oldPassphrase:password,passphrase:newPassword});await api(ui,'VAULT_LOCK');
   await assert.rejects(api(ui,'VAULT_UNLOCK',{passphrase:password}));await api(ui,'VAULT_UNLOCK',{passphrase:newPassword});
