@@ -126,6 +126,10 @@
     enqueue(el,text,'paste'); editor(el,text,true);
   },true);
   chrome.runtime.onMessage.addListener((m,sender,respond)=>{
+    if (sender.id === chrome.runtime.id && m.type === 'RECHECK') {
+      respond({ok:true});
+      message({type:'HELLO'}).then(()=>{active=true;mount();}).catch(()=>{active=false;pending=null;clearTimeout(timer);host?.remove();});return;
+    }
     if (sender.id === chrome.runtime.id && m.type === 'START') {active=true;mount();respond({ok:true});return;}
     if (sender.id === chrome.runtime.id && m.type === 'STOP') {active=false;pending=null;clearTimeout(timer);host?.remove();respond({ok:true});return;}
     if (sender.id !== chrome.runtime.id || m.type !== 'RESTORE') return;

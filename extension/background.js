@@ -19,7 +19,7 @@ async function write(state) {
   await chrome.action.setBadgeText({text:''}).catch(()=>{});
 }
 const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))), b=>b.toString(16).padStart(2,'0')).join('');
-const trusted = sender => sender.id === chrome.runtime.id && !sender.tab &&
+const trusted = sender => sender.id === chrome.runtime.id && !sender.tab?.incognito &&
   ['popup.html','workspace.html'].some(p => sender.url?.split('?')[0] === chrome.runtime.getURL(p));
 async function registerSites(state) {
   const existing = await chrome.scripting.getRegisteredContentScripts();
@@ -32,7 +32,7 @@ async function registerSites(state) {
 }
 async function stopPages(origin) {
   const tabs = await chrome.tabs.query({});
-  await Promise.allSettled(tabs.filter(t=>t.url && (!origin || (()=>{try{return C.originOf(t.url)===origin;}catch{return false;}})())).map(t=>chrome.tabs.sendMessage(t.id,{type:'STOP'},{frameId:0})));
+  await Promise.allSettled(tabs.filter(t=>!origin || t.url && (()=>{try{return C.originOf(t.url)===origin;}catch{return false;}})()).map(t=>chrome.tabs.sendMessage(t.id,{type:'STOP'},{frameId:0})));
 }
 async function activeOrigin(sender) {
   if (!sender.tab || sender.tab.incognito || sender.frameId !== 0) throw new Error('This page is not supported.');
@@ -44,7 +44,7 @@ async function activeOrigin(sender) {
 }
 async function handle(m, sender) {
   if (!m || typeof m.type !== 'string') throw new Error('Invalid request.');
-  if (sender.tab) {
+  if (sender.tab && !trusted(sender)) {
     const {origin, state, url} = await activeOrigin(sender);
     if (m.type === 'HELLO') return {active:true};
     if (m.type !== 'CAPTURE') throw new Error('Unavailable from this page.');
@@ -145,6 +145,8 @@ async function maintenance() {
     for (const origin of state.sites) if (await chrome.permissions.contains({origins:[C.hostPattern(origin)]})) sites.push(origin);
     state.sites = sites;
     await write(state); await registerSites(state);
+    const tabs = await chrome.tabs.query({});
+    await Promise.allSettled(tabs.map(t=>chrome.tabs.sendMessage(t.id,{type:'RECHECK'},{frameId:0})));
     await chrome.alarms.create('retention',{periodInMinutes:60});
   }).catch(()=>{lastError = 'Could not maintain local storage. Keep a separate copy.';});
 }
