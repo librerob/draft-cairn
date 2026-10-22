@@ -1,35 +1,54 @@
 # Privacy policy
 
-Effective 22 October 2026 · Draft Cairn 0.1.2
+Effective 22 October 2026 · Draft Cairn 0.2.0 preview
 
-Draft Cairn stores supported field text only on websites you explicitly enable. It also stores complete oversized pastes temporarily, and library answers you explicitly save or import. No account is required.
+Draft Cairn keeps supported field text only on websites you explicitly enable. It also keeps complete oversized pastes temporarily, and library answers you deliberately save or import. No account is required. Nothing is sent to the developer.
 
-## Information stored
+## Information handled
 
-Recovery records contain answer text, website origin (scheme, host and port), a SHA-256 hash of the page origin and path, page title, field descriptors (including labels, names, IDs and form identifier), save time, expiry time, and form-structure hash. Raw URL paths, query strings, fragments, cookies, and a general browsing-history log are not stored. Selected website origins and page fingerprints are retained for recovery. Credential fields are filtered, but arbitrary narrative text can still contain sensitive information. Titles and field descriptors can contain personal information.
+Recovery records contain answer text, the exact website origin (scheme, host and port), hashed page and field fingerprints, save and expiry times, and a form-structure hash. Saving page titles and field details (labels, IDs, names, form identifier and other field attributes) is optional. This option is off for new installations; existing installations keep their previous behavior. Turning it off removes those details from existing recovery records and makes them copy-only. Titles and field details can contain personal information.
 
-Library records contain title, answer text, optional project, local identifier, and save time. Settings include protected origins and retention period. The extension does not use Chrome Sync.
+Raw URL paths, query strings, fragments, cookies and a general browsing-history log are not stored. Hashes are fingerprints, not guaranteed anonymization: someone who knows candidate pages or fields may guess them. Selected site origins are retained for capture and recovery. Arbitrary narrative answers can contain sensitive information even when credential fields are excluded.
 
-## What leaves the device
+Library records contain title, answer text, optional project, local identifier and save time. They have no website association. Settings include selected and blocked origins, field exclusions, retention, metadata and session-storage choices, and encryption mode. The extension does not use Chrome Sync.
 
-The extension does not transmit answers, settings, telemetry, or error reports. It contains no analytics, ads, affiliate injection, remote AI, remote scripts, or server connections. Its source link opens GitHub only when clicked; GitHub then applies its own policies. Library export writes a file on your device; copying writes to the system clipboard, which other applications or operating-system clipboard services may access. Text explicitly restored into a website becomes available to that website and its scripts, like text you type there.
+## Encryption choices
 
-## Exclusions and limitations
+Answer records are encrypted in both modes, using Web Crypto with no remote key service:
 
-Password, hidden, payment, one-time-code, and other sensitive-hint fields are filtered. Only standard long-answer fields are eligible. Sensitive autocomplete tokens are excluded. `autocomplete="off"` is allowed because it controls browser suggestions rather than sensitivity. Specific credential/payment hints in identifiers and labels are filtered; ordinary narrative labels may be saved. Incognito is disabled. Filtering is imperfect: ordinary narrative answers can contain confidential information. Use only where you have authority to keep a local copy and understand the website's rules.
+- **Automatic encryption (default):** AES-256-GCM with a fresh random 96-bit IV and authenticated record identifier. The non-extractable key lives in extension-origin IndexedDB in the same browser profile. No password is needed. Someone who controls or copies the complete profile may still use that key to decrypt answers; this mode is not protection against profile theft.
+- **Optional passphrase vault:** each record has its own random AES-256-GCM key, wrapped with RSA-OAEP (3072-bit, SHA-256). The private key is encrypted with a passphrase-derived AES-256-GCM key using PBKDF2-SHA-256, 600,000 iterations and a random 128-bit salt. The public key permits new captures while locked. Reading, searching, restoring and library changes require unlocking. A forgotten passphrase cannot be reset: saved drafts and library answers become unrecoverable. Wiping remains available without the passphrase.
 
-Persisted answers, field metadata, and settings are encrypted with AES-256-GCM, using a fresh random IV and authenticated record identifier for every write. The non-extractable Web Crypto key is stored in extension-origin IndexedDB in the same browser profile, allowing recovery after restart without a password. This is not a password-protected vault: people or software controlling your browser profile or device may still decrypt or read answers. Losing the local key makes encrypted records unrecoverable. Earlier plaintext state is migrated and removed only after encrypted storage commits successfully; deletion cannot erase old disk sectors or backups. Pending site-enablement choices and safe error messages are kept in trusted extension session memory. On-page editor contents are shown within the website and should not be treated as isolated from a hostile website. Local deletion is not a forensic secure erase and may not remove OS or device backups.
+The passphrase is not stored. While unlocked, a serialized private key is kept in trusted `chrome.storage.session` memory so unlocking survives service-worker suspension. It is imported as a non-extractable Web Crypto key for use. Explicit locking removes that session entry and clears the worker's decrypted-record cache; open workspaces clear rendered answers and unsaved editors. Closing Chrome completely, reloading/disabling the extension, or clearing the extension session also removes the session key. Closing the last window may leave Chrome running in the background.
+
+An operational index remains readable in the profile in both modes: enabled/blocked origins, exclusion hashes and associated origins, retention settings, record identifiers, hashed grouping/site fingerprints, counts, sizes, save/expiry times, vault public key and passphrase-wrapping parameters. Answer text, library titles/projects, page titles and field descriptors are encrypted. The vault protects answer contents in copied profile files or backups made after setup, not this operational metadata. It cannot protect earlier plaintext copies, older automatic-encryption backups, exported readable files, screenshots, text on websites, a compromised live browser, or malware on an unlocked device. There is no independent security audit.
+
+Records, index updates and key changes commit together in an IndexedDB transaction. Upgrades preserve the old store until the new encrypted store commits; cleanup then removes old records and the legacy key. Local deletion is not a forensic secure erase: old disk sectors, OS snapshots and backups may retain previous data. Storage pressure, browser/profile removal, lost keys or device failure can still destroy local data. Keep a separate copy of important work.
+
+## What leaves the extension
+
+There are no analytics, ads, affiliate injection, remote AI, remote scripts, server connections or error-report uploads. The source link opens GitHub only when clicked; GitHub then applies its own policies. Library export writes a local file. Readable JSON exports contain complete answers; encrypted exports require the separate passphrase chosen for that file. Changing the vault passphrase does not change existing export files.
+
+Copy writes to the system clipboard. Other apps, clipboard managers, Windows clipboard history and cross-device clipboard services may retain or synchronize it. Locking/wiping cannot clear those copies. Explicit restoration makes text available to the website and its scripts, just like text typed there. The on-page editor is displayed on a website and should not be treated as a secure vault interface against a hostile website.
+
+## Capture exclusions
+
+Only visible, editable standard long-answer fields on enabled top-level pages qualify. Password, payment, one-time-code, hidden and other sensitive-hint fields are filtered. Sensitive autocomplete tokens are excluded; `autocomplete="off"` is allowed. Incognito, frames and rich-text editors are unsupported. Filters are imperfect. Use only where you have authority to retain a local copy.
+
+You can block a site from the popup. A field can be excluded from the larger on-page editor; fields with the same identity on that page are excluded together and their recovery revisions are deleted. A hashed exclusion and its origin are retained until removed in settings. Blocking a site stops capture but keeps earlier drafts unless you delete them.
 
 ## Retention and deletion
 
-Recovery defaults to seven days; options are 1, 3, 7, 14, or 30 days. Original oversized pastes expire within one hour or sooner if deleted. Expired records are excluded on every read and purged on the next successful write, hourly cleanup, or startup while Chrome is running. Chrome must run for scheduled deletion; closed-browser files may retain expired bytes until cleanup succeeds. The oldest recovery records can be removed earlier when the 180-record or 6 MiB plaintext budget fills; the UI reports these evictions. Library answers remain until explicitly deleted, with a separate capacity limit reserving space for recovery.
+New installations default to one day of recovery. Existing installations retain their choice. Options are 1, 3, 7, 14 or 30 days. Original oversized pastes expire within one hour. Expired records are excluded on reads and removed on successful writes, hourly cleanup or startup while Chrome runs. Closed-browser files may retain expired bytes until cleanup succeeds.
 
-The workspace can delete individual revisions, all drafts and protection settings for a website, individual library answers, or all extension data and granted website access. Site deletion does not delete manually saved library answers, which have no site association. Exports, the clipboard, browser-profile backups, and copies restored onto websites are outside the extension's deletion controls. Uninstalling removes extension storage according to Chrome's normal behavior.
+Recovery is a rolling buffer: the oldest revisions can disappear earlier at the 180-record or 6 MiB total plaintext budget. Library capacity reserves space for recovery; library answers are never evicted. Evictions are shown in the UI.
 
-## Limited use
+Optional **session-only recovery** moves encrypted recovery records into trusted browser-session memory with a smaller 2 MiB plaintext budget. Switching can evict oldest recovery revisions to fit. Drafts disappear when the extension/browser session ends; library answers remain persistent. Switching back makes currently surviving drafts persistent again; it cannot recover drafts from an ended session.
 
-Draft Cairn uses handled data only for its disclosed answer recovery, paste protection, and answer-library features. It does not sell data, use it for advertising or credit decisions, or provide developer access to answers. Its use of information follows the Chrome Web Store User Data Policy, including the Limited Use requirements.
+Individual drafts, site drafts/access, library answers or all extension data can be deleted. Delete all is available in both the workspace and popup, even when the vault is locked, and removes keys/settings/site access too. Site deletion does not remove manually saved library answers. Exports, clipboard history, backups and copies on websites are outside these controls. Uninstalling removes extension storage according to Chrome's normal behavior.
 
-## Questions and reports
+## Limited use and contact
 
-Use [GitHub issues](https://github.com/librerob/draft-cairn/issues) for general questions with synthetic examples only. Never post confidential answers. Use the private security reporting route described in [SECURITY.md](SECURITY.md) for vulnerabilities.
+Handled data is used only for the disclosed answer-recovery, paste-protection and answer-library features. It is not sold, used for advertising or credit decisions, or made accessible to the developer. Use follows the Chrome Web Store User Data Policy, including Limited Use requirements.
+
+Use [GitHub issues](https://github.com/librerob/draft-cairn/issues) for general questions with synthetic examples only. Never post confidential answers. For vulnerabilities use the route in [SECURITY.md](SECURITY.md).

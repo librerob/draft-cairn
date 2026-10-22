@@ -96,6 +96,7 @@ document.querySelectorAll('[data-pane]').forEach(button=>button.onclick=()=>{
   pane=button.dataset.pane;
   document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id !== pane);
   document.querySelectorAll('[data-pane]').forEach(b=>{if(b===button)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  refresh().catch(e=>notice(e.message,true));
 });
 $('draft-search').oninput=renderDrafts;$('library-search').oninput=renderLibrary;
 $('refresh').onclick=()=>refresh().catch(e=>notice(e.message,true));
@@ -181,6 +182,9 @@ $('session-only').onchange=async()=>{
 };
 $('clear').onclick=async()=>{if(!confirm('Permanently delete all extension drafts, library answers, settings, and site permissions?'))return;try{await api('CLEAR');await refresh();notice('All extension data and site access deleted.');}catch(e){notice(e.message,true);}};
 chrome.storage.onChanged.addListener((changes,area)=>{
+  // Typing must not re-read/re-render a multi-megabyte library every debounce.
+  // Recovery has an explicit Refresh action; pane changes refresh as well.
+  if(area==='local' && changes['cairn-change']?.newValue?.kind==='capture')return;
   if(area==='session' && changes['cairn-vault-session']?.oldValue && !changes['cairn-vault-session'].newValue)scrub();
   if(area==='local' && changes['cairn-change'] || area==='session' && changes['cairn-vault-session'])refresh().catch(()=>notice('Could not refresh local data.',true));
 });

@@ -16,7 +16,7 @@ await cp(path.join(root,'extension'),extension,{recursive:true});
 // Service workers prohibit dynamic import(); this binding is absent from the ZIP.
 const workerFile=path.join(extension,'background.js');
 const workerSource=(await readFile(workerFile,'utf8')).replace('const safe = /',"globalThis.testError={name:error.name,frames:String(error.stack).split('\\n').slice(1,4)}; const safe = /");
-await writeFile(workerFile,workerSource+'\nimport * as testStore from "./storage.js"; globalThis.testStore=testStore;\n');
+await writeFile(workerFile,workerSource+'\nimport * as testStore from "./storage.js"; globalThis.testStore=testStore;\nimport * as testLegacy from "./legacy-storage.js"; globalThis.testLegacy=testLegacy;\n');
 // Only the temporary test copy has a pre-granted loopback host. The shipping manifest
 // keeps all host access optional. The native optional-permission dialog is a manual check.
 const manifest=JSON.parse(await readFile(path.join(extension,'manifest.json'),'utf8'));
@@ -52,6 +52,14 @@ async function names(page){
   return (await sessions.get(page).send('Accessibility.getFullAXTree')).nodes.map(n=>n.name?.value || '');
 }
 async function waitProtected(page){await poll(()=>names(page),items=>items.some(n=>n.startsWith('Draft Cairn ·')));}
+async function clickAccessible(page,predicate) {
+  const session=await context.newCDPSession(page),tree=await session.send('Accessibility.getFullAXTree');
+  const node=tree.nodes.find(n=>n.role?.value==='button' && predicate(n.name?.value || ''));
+  assert(node?.backendDOMNodeId,'Expected an accessible button');
+  const {model}=await session.send('DOM.getBoxModel',{backendNodeId:node.backendDOMNodeId});
+  const q=model.content;await page.mouse.click((q[0]+q[2]+q[4]+q[6])/4,(q[1]+q[3]+q[5]+q[7])/4);
+}
+
 async function paste(page,selector,text,start,end){
   await page.locator(selector).focus();
   await page.locator(selector).evaluate((el,{start,end})=>el.setSelectionRange(start ?? 0,end ?? el.value.length),{start,end});
@@ -294,8 +302,10 @@ try {
   check('vault unlock survives service-worker suspension within the same browser session');
   await context.close();({worker,id,ui}=await launch());state=await api(ui,'STATE');assert(state.locked);assert.equal(state.libraryCount,1);
   vaultPage=await context.newPage();await vaultPage.goto(base+'/index.html');await waitProtected(vaultPage);
+  const restartRefs=await worker.evaluate(async()=>(await globalThis.testStore.publicState()).drafts.map(d=>d.ref));
   await vaultPage.locator('#impact').fill('Synthetic locked after full restart');
-  await poll(()=>names(vaultPage),items=>items.some(n=>n.includes('saved on this device')));
+  await poll(()=>names(vaultPage),items=>items.some(n=>n.startsWith('Draft Cairn · saved on this device')));
+  await poll(()=>worker.evaluate(async()=>(await globalThis.testStore.publicState()).drafts.map(d=>d.ref)),refs=>refs.some(ref=>!restartRefs.includes(ref)));
   await api(ui,'VAULT_UNLOCK',{passphrase:newPassword});assert((await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic locked after full restart'));
   check('a full browser restart locks the vault while public-key capture still works');
   await api(ui,'VAULT_LOCK');await api(ui,'PRIVACY',{sessionOnly:true});state=await api(ui,'STATE');assert(state.sessionOnly&&state.locked);
@@ -316,9 +326,53 @@ try {
   await ui.locator('#passphrase').fill(password);ui.once('dialog',dialog=>dialog.accept());await ui.locator('#security-submit').click();
   await poll(()=>ui.locator('#security-dialog').evaluate(el=>el.open),open=>!open);assert.equal((await api(ui,'STATE')).library.length,1);
   check('encrypted backup UI round-trips safely, rejects wrong passwords, and skips duplicates');
+  const exclusionPage=await context.newPage();await exclusionPage.goto(base+'/index.html');await waitProtected(exclusionPage);
+  await exclusionPage.locator('#impact').fill('Synthetic field to exclude');await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic field to exclude'));
+  await clickAccessible(exclusionPage,name=>name.startsWith('Draft Cairn ·'));
+  exclusionPage.once('dialog',dialog=>dialog.accept());await clickAccessible(exclusionPage,name=>name==='Never capture this field');
+  await poll(()=>api(ui,'STATE'),s=>s.ignoredFields.length===1);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic field to exclude'));
+  await exclusionPage.reload();await waitProtected(exclusionPage);await exclusionPage.locator('#impact').focus();
+  await poll(()=>names(exclusionPage),items=>items.some(n=>n.startsWith('Draft Cairn · not protected in this field')));
+  await exclusionPage.locator('#impact').fill('Synthetic excluded after reload');await wait(450);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic excluded after reload'));
+  await api(ui,'UNIGNORE_FIELD',{id:(await api(ui,'STATE')).ignoredFields[0].id});await wait(150);
+  await exclusionPage.locator('#impact').fill('Synthetic allowed again');await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic allowed again'));
+  check('trusted field exclusion deletes its drafts, persists across reload, warns, and can be removed');
   await api(ui,'BLOCK_SITE',{origin:base});await assert.rejects(api(ui,'ENABLE',{origin:base}));assert((await api(ui,'STATE')).blockedSites.includes(base));
   await api(ui,'UNBLOCK_SITE',{origin:base});await api(ui,'ENABLE',{origin:base});
   check('Never capture site blocks prevent accidental re-enabling until removed');
+  await api(ui,'PRIVACY',{sessionOnly:false});
+  const migrationSize=await worker.evaluate(async()=>{
+    const state=await globalThis.testStore.load(),template=state.drafts[0];
+    state.drafts=Array.from({length:180},(_,i)=>({...template,id:`vault-scale-${i}`,key:`vault-scale-${i}`,text:'Synthetic vault scale '+i+'x'.repeat(30000),saved:Date.now()-1000+i}));
+    await globalThis.testStore.commit(state);return globalThis.Cairn.stateBytes(state);
+  });assert(migrationSize>5*1024*1024);
+  await worker.evaluate(()=>{
+    globalThis.atomicPut=IDBObjectStore.prototype.put;globalThis.rekeyAborted=false;
+    IDBObjectStore.prototype.put=function(value,key){if(this.name==='meta'&&key==='index'&&value.mode==='vault'){globalThis.rekeyAborted=true;this.transaction.abort();throw new Error('Synthetic vault migration failure');}return globalThis.atomicPut.call(this,value,key);};
+  });
+  await assert.rejects(api(ui,'VAULT_ENABLE',{passphrase:password,acknowledged:true}));
+  assert(await worker.evaluate(()=>globalThis.rekeyAborted));await worker.evaluate(()=>{IDBObjectStore.prototype.put=globalThis.atomicPut;});
+  assert.equal((await api(ui,'STATE')).mode,'automatic');assert.equal((await api(ui,'STATE')).draftCount,180);
+  check('failed near-capacity vault migration rolls back records, index and key atomically');
+  await api(ui,'VAULT_ENABLE',{passphrase:password,acknowledged:true});await api(ui,'VAULT_LOCK');
+  assert.equal((await api(ui,'STATE')).draftCount,180);await api(ui,'PRIVACY',{sessionOnly:true});
+  state=await api(ui,'STATE');assert(state.locked);assert(state.draftCount<180&&state.draftCount>0);assert.equal(state.libraryCount,1);
+  await api(ui,'VAULT_UNLOCK',{passphrase:password});assert((await api(ui,'STATE')).drafts.every(d=>d.text.startsWith('Synthetic vault scale')));
+  check('near-capacity vault migration succeeds; locked session-only conversion evicts oldest drafts to fit memory');
+  await api(ui,'VAULT_LOCK');await api(ui,'CLEAR');assert.equal((await api(ui,'STATE')).libraryCount,0);
+  check('all-data deletion works without unlocking the vault');
+  await ui.close();await worker.evaluate(async()=>{
+    await globalThis.testStore.erase();const state=globalThis.Cairn.fresh();state.days=7;state.metadata=true;
+    state.library=[{id:'v2-upgrade',title:'Synthetic v2 answer',text:'Synthetic encrypted v2 payload',project:'Upgrade',saved:Date.now()}];
+    await globalThis.testLegacy.commit(state);
+  });
+  await context.close();({worker,id,ui}=await launch());state=await api(ui,'STATE');
+  assert(state.library.some(a=>a.id==='v2-upgrade'&&a.text==='Synthetic encrypted v2 payload'));assert.equal(state.days,7);assert.equal(state.metadata,true);
+  const oldKeys=await worker.evaluate(async()=>Object.keys(await chrome.storage.local.get(null)));assert(!oldKeys.some(k=>k==='cairn-v2'||k.startsWith('cairn-record-')));
+  assert(!(await worker.evaluate(()=>indexedDB.databases())).some(db=>db.name==='cairn-keys'));
+  check('v0.1.2 encrypted records upgrade without data loss and legacy ciphertext/key are removed');
+
+
   await api(ui,'CLEAR');
   await mkdir(path.join(root,'test-results'),{recursive:true});
   await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({browser:context.browser()?.version(),automated:report,permissionPrompt:'not automated; temporary loopback host pre-grant; native removal simulated',clipboard:'browser clipboard populated by API, trusted keyboard paste; daily-use OS clipboard still manual',syntheticOnly:true},null,2));

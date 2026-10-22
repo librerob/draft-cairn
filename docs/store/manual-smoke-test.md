@@ -1,8 +1,8 @@
 # Final Chrome smoke test
 
-Status: **not yet performed on the unmodified 0.1.2 ZIP**. Automated Chromium tests use a test-only localhost host grant; they cannot stand in for these checks. Use only synthetic text. Stop submission if a required step fails.
+Status: **not yet performed on the unmodified 0.2.0 ZIP**. Automated Chromium tests use a test-only localhost host grant; they cannot stand in for these checks. Use only synthetic text. Stop submission if a required step fails.
 
-1. Extract `draft-cairn-0.1.2.zip` and load that extracted folder in a fresh supported Chrome profile via `chrome://extensions` → Developer mode → Load unpacked. Pin the extension. Do not change its manifest or permissions.
+1. Extract `draft-cairn-0.2.0.zip` and load that extracted folder in a fresh supported Chrome profile via `chrome://extensions` → Developer mode → Load unpacked. Pin the extension. Do not change its manifest or permissions.
 2. Run `node scripts/demo.mjs` from a source checkout and open `http://127.0.0.1:8765/index.html` in that Chrome profile. Before enabling protection, type a synthetic answer. Confirm no draft is captured.
 3. Open the popup and choose Enable for this site. Deny Chrome's native access request. Confirm protection stays off. Repeat and approve. If Chrome closes the popup, reopen it and confirm protection has finished enabling. Type a new synthetic answer in Project summary and wait for “saved on this device”.
 4. Reload the demo, open Recovery & library, and restore the saved answer into the now-empty Project summary field. Check it is exact. Put new text in the destination and confirm restoration refuses to overwrite it.
@@ -14,3 +14,15 @@ Status: **not yet performed on the unmodified 0.1.2 ZIP**. Automated Chromium te
 10. Delete site data, then all extension data. Confirm the relevant records and site access are gone. Use synthetic data on two or three intended application portals too, with permission to do so; record the exact portal and supported/unsupported fields privately without saving actual client text.
 
 Record Chrome/OS version, date, pass/fail, and any issue using synthetic descriptions. The local Windows environment blocked the downloaded Chrome for Testing binary by application-control policy; that policy was not bypassed. Native Chrome permission and OS clipboard checks remain a submission gate until the owner or an available compatible environment completes them.
+
+## Optional vault and privacy controls
+
+- [ ] Fresh install: one-day retention, page details off; supported typing saves and is copy-only.
+- [ ] Enable page details, type/wait/reload, restore into a uniquely matched empty field. Turn details off and confirm prior titles/descriptors disappear and restore is unavailable.
+- [ ] Enable vault with a saved passphrase; acknowledge unrecoverability. Wrong passphrase reveals nothing. Lock clears rendered answers and unsaved workspace editor text in every open workspace.
+- [ ] Type/wait while locked; unlock and recover that exact answer. Suspend/restart the service worker: unlock persists. Fully exit/restart Chrome: vault locks and saving still works.
+- [ ] Change passphrase, reject old/accept new. Return to automatic encryption with the current password; restart and recover without a password.
+- [ ] Session-only: warn about smaller budget; fully end Chrome/extension session, verify drafts gone but library retained. Test with Chrome background mode enabled too.
+- [ ] Encrypted export/import: wrong password/tampered file rejected; correct password works. Readable export warning is clear.
+- [ ] Exclude a field in its larger editor; verify warning/no more captures across reload. Remove exclusion. Block/unblock a site.
+- [ ] Popup Delete all while locked removes answers, vault/settings/access. Clipboard/history/export files remain outside the wipe.

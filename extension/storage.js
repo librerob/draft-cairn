@@ -19,8 +19,8 @@ const label=(index,ref)=>'draft-cairn-record-v3|'+index.generation+'|'+ref;
 function frozen(record) {
   if(record.field)Object.freeze(record.field);return Object.freeze(record);
 }
-async function notify() {
-  await chrome.storage.local.set({'cairn-change':crypto.randomUUID()}).catch(()=>{});
+async function notify(kind='change') {
+  await chrome.storage.local.set({'cairn-change':{id:crypto.randomUUID(),kind}}).catch(()=>{});
 }
 async function automatic(index) {
   if(autoCache)return autoCache;
@@ -100,7 +100,7 @@ async function decrypt(entry,index,value) {
     return frozen(raw);
   } catch{throw new Error('Local storage could not be decrypted. Existing data was preserved. Keep a separate copy.');}
 }
-async function persist(next,writes,before,autoKey) {
+async function persist(next,writes,before,autoKey,kind='change') {
   const all=[...next.drafts,...next.library], persisted=all.filter(e=>!e.memory), memory=all.filter(e=>e.memory);
   const memoryValues={};
   for(const e of memory)if(writes.has(e.ref))memoryValues[memoryKey(e.ref)]=writes.get(e.ref);
@@ -124,7 +124,7 @@ async function persist(next,writes,before,autoKey) {
   const kept=new Set(all.map(e=>e.ref));for(const ref of plaintext.keys())if(!kept.has(ref))plaintext.delete(ref);
   // Cleanup failure cannot turn a committed save into a reported failure.
   await cleanupMemory({...next,sessionRef:disk.sessionRef}).catch(()=>{});
-  await notify();
+  await notify(kind);
 }
 async function entryFor(record,group,index,existing,rekey=false) {
   const memory=group==='drafts' && index.sessionOnly;
@@ -195,7 +195,7 @@ export async function capture(incoming) {
   if(full())throw new Error('Local storage is full. Your last change was not saved. Export or delete library answers and try again.');
   next.evicted=(before.evicted || 0)+evicted;
   const autoKey=next.mode==='automatic' ? await automatic(before) : undefined;
-  await persist(next,new Map([[provisional.ref,await envelope(record,next,provisional.ref,autoKey)]]),before,autoKey);
+  await persist(next,new Map([[provisional.ref,await envelope(record,next,provisional.ref,autoKey)]]),before,autoKey,'capture');
   if(next.mode==='automatic' || await privateKey(next)){const value=frozen(record);plaintext.set(provisional.ref,value);bindings.set(value,drafts[0]);}
   return {saved:true,evicted};
 }
