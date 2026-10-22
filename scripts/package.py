@@ -4,7 +4,7 @@ import hashlib, json, zipfile
 root=Path(__file__).resolve().parents[1]
 extension=root/'extension'
 version=json.loads((extension/'manifest.json').read_text())['version']
-files=['manifest.json','core.js','background.js','content.js','ui.js','ui.css','popup.html','popup.js','workspace.html','workspace.js']+[f'icons/{n}.png' for n in [16,32,48,128]]
+files=['manifest.json','core.js','storage.js','background.js','content.js','ui.js','ui.css','popup.html','popup.js','workspace.html','workspace.js']+[f'icons/{n}.png' for n in [16,32,48,128]]
 actual=sorted(p.relative_to(extension).as_posix() for p in extension.rglob('*') if p.is_file())
 assert actual==sorted(files), 'Unexpected extension file. Review the release allowlist.'
 out=root/'dist'

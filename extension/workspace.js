@@ -59,7 +59,10 @@ function renderSettings() {
 async function refresh() {
   state=await api('STATE');tabs=await chrome.tabs.query({});
   $('summary').textContent=`${state.drafts.length} revisions · ${state.library.length} library answers`;
-  renderDrafts();renderLibrary();renderSettings();if(state.lastError)notice(state.lastError,true);
+  renderDrafts();renderLibrary();renderSettings();
+  $('ack-error').hidden=!state.lastError;
+  if(state.lastError)notice(state.lastError,true);
+  else if(state.evicted)notice(`Oldest recovery revisions have been removed as storage filled (${state.evicted}). Library answers are kept until you delete them.`);
 }
 document.querySelectorAll('[data-pane]').forEach(button=>button.onclick=()=>{
   pane=button.dataset.pane;
@@ -68,6 +71,7 @@ document.querySelectorAll('[data-pane]').forEach(button=>button.onclick=()=>{
 });
 $('draft-search').oninput=renderDrafts;$('library-search').oninput=renderLibrary;
 $('refresh').onclick=()=>refresh().catch(e=>notice(e.message,true));
+$('ack-error').onclick=async()=>{await api('ACK_ERROR');notice('Warning acknowledged. Check the affected answer before relying on recovery.');await refresh();};
 $('new-answer').onclick=()=>openEditor();$('close-editor').onclick=()=>$('answer-dialog').close();
 $('answer-dialog').addEventListener('close',()=>{$('answer-form').reset();$('editor-error').textContent='';count();});
 $('answer-text').oninput=count;
@@ -89,9 +93,10 @@ $('import').onchange=async()=>{
   catch(e){notice(e.message,true);}finally{$('import').value='';}
 };
 $('clear').onclick=async()=>{if(!confirm('Permanently delete all extension drafts, library answers, settings, and site permissions?'))return;try{await api('CLEAR');await refresh();notice('All extension data and site access deleted.');}catch(e){notice(e.message,true);}};
-chrome.storage.onChanged.addListener((changes,area)=>{
-  const next=changes.state?.newValue;
-  if(area==='local' && next && !next.sites.length && !next.drafts.length && !next.library.length) {
+chrome.storage.onChanged.addListener(async(changes,area)=>{
+  if(area==='local' && changes['cairn-v2']) {
+    const next=await api('STATE');
+    if(next.sites.length || next.drafts.length || next.library.length)return;
     if($('answer-dialog').open)$('answer-dialog').close();
     refresh().catch(()=>notice('Could not refresh local data.',true));
   }

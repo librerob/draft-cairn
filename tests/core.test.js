@@ -5,7 +5,9 @@ const C=globalThis.Cairn;
 const field={tag:'TEXTAREA',type:'textarea',id:'summary',name:'summary',label:'Summary',form:'application',placeholder:'',autocomplete:'on',visible:true,disabled:false,readOnly:false,private:false,maxLength:500};
 test('captures long answers; excludes sensitive hints, input types, and hidden fields',()=>{
   assert(C.allowedField(field));assert(C.allowedField({...field,tag:'INPUT',type:'text',maxLength:200}));
-  for(const delta of [{tag:'INPUT',type:'password'},{tag:'INPUT',type:'email'},{tag:'INPUT',type:'hidden'},{tag:'INPUT',type:'text',maxLength:40},{visible:false},{disabled:true},{readOnly:true},{private:true},{autocomplete:'off'},{autocomplete:'one-time-code'},{autocomplete:'cc-number'},{name:'payment-card'},{label:'API token'},{label:'Bank details'},{label:'One time code'}]) assert.equal(C.allowedField({...field,...delta}),false);
+  for(const delta of [{tag:'INPUT',type:'password'},{tag:'INPUT',type:'email'},{tag:'INPUT',type:'hidden'},{tag:'INPUT',type:'text',maxLength:40},{visible:false},{disabled:true},{readOnly:true},{private:true},{autocomplete:'one-time-code'},{autocomplete:'section-a billing cc-number'},{autocomplete:'current-password'},{autocomplete:'email'},{name:'paymentCardNumber'},{label:'API token'},{label:'Bank details'},{label:'One time code'},{name:'verification_code'},{placeholder:'Your passport number'}]) assert.equal(C.allowedField({...field,...delta}),false,JSON.stringify(delta));
+  for(const label of ['payment schedule','credit and acknowledgement plan','scorecard summary','relationship with the bank','verification of eligibility']) assert(C.allowedField({...field,label}),label);
+  for(const autocomplete of ['off','on','','section-application off'])assert(C.allowedField({...field,autocomplete}));
 });
 test('paste capacity respects existing text, selection and UTF-16',()=>{
   assert.deepEqual(C.pasteCapacity('abcdef',2,4,'1234567',10),{available:6,total:11,oversized:true});
@@ -20,7 +22,7 @@ test('never restore duplicate identity, changed structure, wrong page, existing 
   for(const args of [[[field,field],'a','b',true],[[field],'c','b',true],[[field],'a','c',true],[[field],'a','b',false],[[{...field,id:'other'}],'a','b',true]]) assert.equal(C.matchField(saved,...args),null);
   assert.equal(C.matchField({...saved,field:{...field,id:'',name:''}},[{...field,id:'',name:''}],'a','b',true),null);
 });
-test('revisions and quotas are bounded without silently discarding another field',()=>{
+test('revisions and quotas remain bounded',()=>{
   const state=C.fresh();
   for(let n=0;n<12;n++)C.addDraft(state,{key:'a',kind:'draft',text:`Synthetic revision ${n}`},n*31000);
   assert.equal(state.drafts.length,4);
@@ -29,6 +31,23 @@ test('revisions and quotas are bounded without silently discarding another field
   assert.throws(()=>C.bounded({...C.fresh(),library:Array(301).fill({text:'synthetic'})}));
   assert.throws(()=>C.bounded({...C.fresh(),drafts:Array(181).fill({text:'synthetic'})}));
   assert.throws(()=>C.bounded({...C.fresh(),library:Array(70).fill({text:'x'.repeat(100000)})}));
+});
+test('newest recovery survives draft-count pressure; eviction is oldest-first and disclosed',()=>{
+  const state=C.fresh();state.library=[{title:'Keep',text:'Never evict a library answer'}];
+  for(let n=0;n<220;n++)C.addDraft(state,{key:`field-${n}`,kind:'draft',text:`Answer ${n}`},n);
+  assert.equal(state.drafts.length,180);assert.equal(state.evicted,40);
+  assert.equal(state.drafts[0].text,'Answer 219');assert(!state.drafts.some(d=>d.text==='Answer 0'));
+  assert(state.drafts.some(d=>d.text==='Answer 40'));assert.equal(state.library.length,1);
+});
+test('byte pressure evicts recovery, preserves library, and reserves capacity for new drafts',()=>{
+  const state=C.fresh();state.library=Array.from({length:40},(_,i)=>({title:String(i),text:'x'.repeat(100000)}));
+  C.libraryBounded(state);
+  for(let n=0;n<60;n++)C.addDraft(state,{key:String(n),kind:'draft',text:'y'.repeat(100000)},n);
+  assert(C.stateBytes(state)<=C.MAX_BYTES);assert(state.evicted>0);
+  assert.equal(state.drafts[0].key,'59');assert.equal(state.library.length,40);
+  const exact=new TextEncoder().encode(JSON.stringify(state)).length;assert.equal(C.stateBytes(state),exact);
+  assert.throws(()=>C.libraryBounded({...state,library:Array.from({length:60},()=>({title:'Large',text:'x'.repeat(100000)}))}),/Recovery capacity/);
+  assert.throws(()=>C.addDraft(C.fresh(),{text:'x'.repeat(100001)}),/Invalid draft/);
 });
 test('expiry applies to drafts and original pastes, never explicit library answers',()=>{
   const state=C.fresh();state.library=[{title:'Synthetic',text:'Example'}];

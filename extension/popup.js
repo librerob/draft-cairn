@@ -8,7 +8,7 @@ async function render() {
   enabled=!!origin && state.sites.includes(origin) && await chrome.permissions.contains({origins:[Cairn.hostPattern(origin)]});
   $('site').textContent=origin || 'Choose an ordinary website';
   $('status').textContent=enabled ? 'Protection is on' : 'Protection is off';
-  $('detail').textContent=enabled ? 'Supported answers save as you type. Recovery requires a successful save.' : 'Enable for this site before writing. Only long text fields are supported.';
+  $('detail').textContent=enabled ? 'Only supported fields save. Check the on-page status in the field you are using.' : 'Enable before writing. Saves answer text, page titles and field labels locally; sensitive text can be included. Chrome grants this host across ports, but capture is limited to this exact origin.';
   $('toggle').textContent=enabled ? 'Turn protection off' : 'Enable for this site';$('toggle').disabled=!origin;
   const drafts=state.drafts.filter(d=>d.origin === origin).sort((a,b)=>b.saved-a.saved).slice(0,3);
   $('count').textContent=drafts.length ? 'This site' : '';
@@ -23,12 +23,17 @@ $('toggle').onclick=async()=>{
     if(enabled)await api('DISABLE',{origin});
     else {
       // Keep the permission request directly inside the user gesture.
-      const granted=await chrome.permissions.request({origins:[Cairn.hostPattern(origin)]});
-      if(!granted){notice('Site access was not granted. Protection remains off.');return;}
+      const pending=chrome.storage.session.set({[`enable-${tab.id}`]:{origin,tabId:tab.id,created:Date.now()}});
+      // Request immediately in this click, before awaiting any API. The pending
+      // choice survives popup closure; onAdded completes it in the worker.
+      const permission=chrome.permissions.request({origins:[Cairn.hostPattern(origin)]});
+      await pending;
+      const granted=await permission;
+      if(!granted){await chrome.storage.session.remove(`enable-${tab.id}`);notice('Site access was not granted. Protection remains off.');return;}
       await api('ENABLE',{origin,tabId:tab.id});
     }
     await render();notice(enabled ? 'Protection enabled. Answers stay on this device.' : 'Protection is off. Saved drafts remain until deleted or expired.');
   }catch(e){notice(e.message,true);}finally{button.disabled=!origin;}
 };
 $('workspace').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL(`workspace.html?tab=${tab?.id || ''}`)});
-render().catch(e=>notice(e.message,true));
+api('FINISH_ENABLE').then(render).catch(e=>notice(e.message,true));

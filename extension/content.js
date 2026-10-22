@@ -8,6 +8,7 @@
   let pending;
   let lastField;
   let host, root, status;
+  const fieldStatus = new WeakMap();
   const shorten = s => (s || '').trim().replace(/\s+/g,' ').slice(0,200);
   const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))), b=>b.toString(16).padStart(2,'0')).join('');
   function describe(el) {
@@ -33,7 +34,6 @@
   function mount() {
     if (host?.isConnected) return;
     host = document.createElement('div');
-    host.setAttribute('data-cairn-ui','');
     root = host.attachShadow({mode:'closed'});
     const style = document.createElement('style');
     style.textContent = `:host{all:initial;font:14px/1.5 system-ui;color:#1c312e}*{box-sizing:border-box}button,textarea{font:inherit}button{padding:10px 14px;border:1px solid #a9b9af;background:#fffdf7;color:#1c312e;border-radius:8px;cursor:pointer}button:focus-visible,textarea:focus-visible{outline:3px solid #126d5a;outline-offset:3px}.pill{position:fixed;bottom:16px;right:16px;z-index:2147483647;background:#143f36;color:white;border:1px solid #517d6f;box-shadow:0 4px 18px #0002;border-radius:10px;padding:9px 14px;max-width:min(380px,90vw);text-align:left}.error{background:#803521}dialog{color:#1c312e;background:#fffdf7;border:1px solid #a9b9af;border-radius:16px;padding:24px;width:min(700px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 70px #0004}dialog::backdrop{background:#102e2a99}h2{font-size:22px;margin:0 0 12px}textarea{display:block;width:100%;height:38vh;min-height:160px;resize:vertical;padding:12px;background:white;color:#1c312e;border:1px solid #83968d;border-radius:8px}label{display:block;font-weight:600;margin-bottom:8px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.primary{background:#143f36;color:white}p{margin:10px 0}small{display:block}`;
@@ -42,21 +42,40 @@
     status.className = 'pill'; status.type = 'button'; status.setAttribute('aria-live','polite');
     status.title = 'Open a larger editor for the last supported field';
     status.onclick = ()=>{if(lastField?.isConnected && C.allowedField(describe(lastField))) editor(lastField,lastField.value,false);};
-    status.textContent = 'Draft Cairn · protection on';
+    status.textContent = 'Draft Cairn · choose a supported answer field';
     root.append(status);
     document.documentElement.append(host);
   }
   function announce(text, error = false) {
     mount(); status.textContent = `Draft Cairn · ${text}`; status.classList.toggle('error',error);
   }
-  async function capture(snapshot) {
-    if (!active || !snapshot) return;
-    try {
-      await message(snapshot);
-      announce('saved on this device');
-    } catch {
-      announce('not saved — open recovery or keep a separate copy',true);
+  function focusedStatus() {
+    if (!active) return;
+    const el=document.activeElement;
+    if (el===host) return;
+    if (el?.matches?.('textarea,input') && C.allowedField(describe(el))) {
+      lastField=el;
+      const saved=fieldStatus.get(el);
+      announce(saved?.text || 'supported field · not saved yet',saved?.error || false);
+    } else {
+      lastField=null;
+      const editable=el?.matches?.('textarea,input,iframe,[contenteditable]:not([contenteditable="false"]),[role="textbox"]') || el?.isContentEditable || el?.shadowRoot?.activeElement;
+      announce(editable ? 'not protected in this field' : 'choose a supported answer field',!!editable);
     }
+  }
+  async function capture(snapshot,el) {
+    if (!active || !snapshot) return;
+    const version=activation;
+    try {
+      const result=await message(snapshot);
+      if (!active || version!==activation) return;
+      // A completed earlier write must not label a newer, unsaved edit as saved.
+      if (snapshot.kind==='paste' || el.value===snapshot.text) fieldStatus.set(el,{text:result.evicted ? 'saved · oldest recovery revisions removed' : 'saved on this device'});
+    } catch {
+      if (!active || version!==activation) return;
+      fieldStatus.set(el,{text:'not saved — open recovery or keep a separate copy',error:true});
+    }
+    focusedStatus();
   }
   async function snapshot(el, text, kind) {
     const field = describe(el);
@@ -69,7 +88,7 @@
   function enqueue(el, text, kind = 'draft') {
     captures = captures.then(async()=>{
       if (!el.isConnected || !C.allowedField(describe(el))) return;
-      await capture(await snapshot(el,text,kind));
+      await capture(await snapshot(el,text,kind),el);
     }).catch(()=>announce('not saved — keep a separate copy',true));
     return captures;
   }
@@ -106,21 +125,22 @@
     root.append(dialog); dialog.showModal(); area.focus();
   }
   document.addEventListener('focusin',e=>{
-    if (active && e.target.matches?.('textarea,input') && C.allowedField(describe(e.target))) {
-      lastField = e.target; announce('protection on · click to open editor');
-    }
+    if (e.target!==host) focusedStatus();
   },true);
+  window.addEventListener('blur',()=>setTimeout(focusedStatus,0));
   document.addEventListener('input',e=>{
+    if (!e.isTrusted) return;
     const el = e.target;
     if (!active || !el.matches?.('textarea,input') || !C.allowedField(describe(el))) return;
     if (pending && pending.el !== el) flush();
     lastField=el; pending={el,text:el.value};
-    announce('saving…'); clearTimeout(timer); timer=setTimeout(flush,250);
+    fieldStatus.set(el,{text:'saving…'});focusedStatus(); clearTimeout(timer); timer=setTimeout(flush,250);
   },true);
   document.addEventListener('focusout',()=>flush(),true);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)flush();});
   window.addEventListener('pagehide',flush);
   document.addEventListener('paste',e=>{
+    if (!e.isTrusted) return;
     const el=e.target;
     if (!active || !el.matches?.('textarea,input') || !C.allowedField(describe(el)) || el.maxLength < 0 || !e.clipboardData) return;
     const text=e.clipboardData.getData('text/plain');
@@ -132,9 +152,9 @@
     if (sender.id === chrome.runtime.id && m.type === 'RECHECK') {
       respond({ok:true});
       const version=activation;
-      message({type:'HELLO'}).then(()=>{if(version===activation){active=true;mount();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);host?.remove();}});return;
+      message({type:'HELLO'}).then(()=>{if(version===activation){active=true;focusedStatus();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);host?.remove();}});return;
     }
-    if (sender.id === chrome.runtime.id && m.type === 'START') {activation++;active=true;mount();respond({ok:true});return;}
+    if (sender.id === chrome.runtime.id && m.type === 'START') {activation++;active=true;focusedStatus();respond({ok:true});return;}
     if (sender.id === chrome.runtime.id && m.type === 'STOP') {activation++;active=false;pending=null;clearTimeout(timer);host?.remove();respond({ok:true});return;}
     if (sender.id !== chrome.runtime.id || m.type !== 'RESTORE') return;
     (async()=>{
@@ -155,5 +175,5 @@
     return true;
   });
   const initialVersion=activation;
-  message({type:'HELLO'}).then(()=>{if(initialVersion!==activation)return;active=true;if(document.documentElement)mount();else document.addEventListener('DOMContentLoaded',()=>{if(active)mount();},{once:true});}).catch(()=>{});
+  message({type:'HELLO'}).then(()=>{if(initialVersion!==activation)return;active=true;if(document.documentElement)focusedStatus();else document.addEventListener('DOMContentLoaded',()=>{if(active)focusedStatus();},{once:true});}).catch(()=>{});
 })();

@@ -1,4 +1,4 @@
-Draft Cairn 0.1.1 preview — synthetic reviewer test instructions
+Draft Cairn 0.1.2 preview — synthetic reviewer test instructions
 
 No account, payment, reviewer credentials, remote service, or client data is needed.
 
@@ -9,6 +9,8 @@ Source and local demo: https://github.com/librerob/draft-cairn
 4. Existing text is never overwritten. The two Additional detail fields have duplicate identities and support copying rather than direct restoration. Query/fragment pages are copy-only.
 5. Use Copy synthetic long answer in the demo, then paste into Project summary (maxlength 500). An oversized paste is stopped; a labelled larger editor shows the complete original and character counter. The original is saved temporarily for up to one hour if the storage write succeeds. Custom website limits are not detected.
 6. In Answer library, save a synthetic answer with a title and optional project. Search, copy, export/import v1 JSON, and delete it. Exports contain plain-text answers and have an explicit warning.
-7. Sites & settings controls retention (seven days by default), disabling protection, deleting site data, and deleting all extension data.
+7. Focus a password field or a rich-text/contenteditable field: the on-page status must say not protected in this field. Ordinary autocomplete=off narrative fields are supported; synthetic script-dispatched input/paste events do not save.
+8. Recovery uses oldest-first eviction at 180 records or the byte budget, with a visible notice; library answers are never automatically removed.
+9. Sites & settings controls retention (seven days by default), disabling protection, deleting site data, and deleting all extension data.
 
-Only standard top-level textareas and long ordinary text inputs are supported. Password/payment/OTP/hidden and sensitive-hint fields, rich text editors, frames, and incognito are excluded. Filtering cannot identify every sensitive answer. Text that has not finished saving can be lost. Storage stays in this browser profile and is not encrypted by Draft Cairn. No analytics, external answer transmission, remotely hosted code, or paid features are present.
+Only standard top-level textareas and long ordinary text inputs are supported. Password/payment/OTP/hidden and sensitive-hint fields, rich text editors, frames, and incognito are excluded. Filtering cannot identify every sensitive answer. Text that has not finished saving can be lost. Persisted records/settings use AES-256-GCM with an automatic non-extractable key in this browser profile. This is not a password-protected vault; browser/profile/device access can still expose answers. No analytics, external answer transmission, remotely hosted code, or paid features are present.

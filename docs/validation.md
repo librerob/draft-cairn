@@ -2,6 +2,18 @@
 
 22 October 2026 · synthetic fixtures only
 
+## 0.1.2 review regression coverage
+
+**10 Node rule-test groups and 32 Chromium scenarios passed** on runtime commit `e96ab132f1c77f40c4747d20d424ba122cbe3e55`. [Passing run](https://github.com/librerob/draft-cairn/actions/runs/39839798197) · [machine-readable results](validation-results-0.1.2.json). Static/syntax, manifest, asset checks, and deterministic packaging passed too.
+
+Coverage adds quota exhaustion, synthetic-event rejection, unsupported-field status, inherited autocomplete=off, sticky failure badges, incremental encrypted writes near capacity, staged-write rollback, ciphertext integrity, local-key properties, legacy migration, full data/key deletion, and pending enable completion without a popup. With 180 records and 5,519,074 plaintext bytes, the largest write for a new small answer was 12,886 bytes; observed end-to-end time was 571 ms including the 250 ms debounce and polling. This one synthetic measurement is not a general performance guarantee.
+
+The browser harness adds a loopback host pre-grant and a static test-only binding to the shipped storage module in its temporary copy. Native permission removal is simulated. Clipboard tests populate the browser clipboard through its API and use trusted keyboard paste; they no longer dispatch synthetic paste events for the positive path. Synthetic events are used to verify rejection. The shipping manifest and ZIP do not contain these harness changes.
+
+The encryption/permission handoff is a material behavior change. Earlier 0.1.0/0.1.1 results below are historical evidence, not evidence for this implementation. Native prompt approval/denial/revocation, the daily-use OS clipboard, and two or three intended portals remain manual submission gates. See [review response](prepublication-review.md) and [smoke-test worksheet](store/manual-smoke-test.md).
+
+## Historical 0.1.0 / 0.1.1 validation
+
 Store-preparation patch 0.1.1 changes the 128px icon, version metadata, and packaging/docs only; recovery behavior and permissions are unchanged. The icon now uses Google's 96px artwork / 16px transparent-margin layout. `scripts/check-assets.py` checks all store PNG sizes and the icon alpha bounds. The full existing CI suite runs for this patch too. Native permission/clipboard manual checks below remain pending. The 0.1.0 validation record is preserved for provenance rather than relabelled as 0.1.1 evidence.
 
 Verified on commit `370d004dddf9b170a06c1ab44ec26aac92cd1a43`: **8 unit groups and 20 Chromium integration scenarios passed**, including all retained draft IDs and library count surviving a real browser-process restart. Browser: Chromium 151.0.7922.34 on Ubuntu 24.04. [Validation run](https://github.com/librerob/draft-cairn/actions/runs/39828150956) and [gated release run](https://github.com/librerob/draft-cairn/actions/runs/39828270784) both succeeded. The [machine-readable result](validation-results.json) lists the exact scenarios and test-grant limitations.

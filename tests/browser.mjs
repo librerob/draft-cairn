@@ -12,6 +12,11 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const temp=await mkdtemp(path.join(tmpdir(),'draft-cairn-test-'));
 const extension=path.join(temp,'extension'), profile=path.join(temp,'profile');
 await cp(path.join(root,'extension'),extension,{recursive:true});
+// Test-only binding to exercise the shipped storage module from worker evaluation.
+// Service workers prohibit dynamic import(); this binding is absent from the ZIP.
+const workerFile=path.join(extension,'background.js');
+const workerSource=(await readFile(workerFile,'utf8')).replace('const safe = /',"globalThis.testError={name:error.name,frames:String(error.stack).split('\\n').slice(1,4)}; const safe = /");
+await writeFile(workerFile,workerSource+'\nimport * as testStore from "./storage.js"; globalThis.testStore=testStore;\n');
 // Only the temporary test copy has a pre-granted loopback host. The shipping manifest
 // keeps all host access optional. The native optional-permission dialog is a manual check.
 const manifest=JSON.parse(await readFile(path.join(extension,'manifest.json'),'utf8'));
@@ -41,22 +46,51 @@ async function launch(){
 }
 async function api(ui,type,rest={}){const result=await ui.evaluate(async({type,rest})=>chrome.runtime.sendMessage({type,...rest}),{type,rest});if(!result.ok)throw new Error(result.error);return result.data;}
 async function poll(fn,predicate,timeout=8000){const until=Date.now()+timeout;while(Date.now()<until){const value=await fn();if(predicate(value))return value;await wait(100);}throw new Error('Synthetic scenario timed out');}
+const sessions=new WeakMap();
+async function names(page){
+  if(!sessions.has(page))sessions.set(page,await context.newCDPSession(page));
+  return (await sessions.get(page).send('Accessibility.getFullAXTree')).nodes.map(n=>n.name?.value || '');
+}
+async function waitProtected(page){await poll(()=>names(page),items=>items.some(n=>n.startsWith('Draft Cairn ·')));}
+async function paste(page,selector,text,start,end){
+  await page.locator(selector).focus();
+  await page.locator(selector).evaluate((el,{start,end})=>el.setSelectionRange(start ?? 0,end ?? el.value.length),{start,end});
+  await page.evaluate(text=>navigator.clipboard.writeText(text),text);
+  await page.keyboard.press(process.platform==='darwin' ? 'Meta+V' : 'Control+V');
+}
 try {
   let {worker,id,ui}=await launch();
   const page=await context.newPage();await page.goto(base+'/index.html');
+  await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:base});
   await page.locator('#summary').fill('Synthetic answer before protection');await wait(450);
   assert.equal((await api(ui,'STATE')).drafts.length,0);check('no capture before explicit site enable');
   const tabId=await ui.evaluate(async()=>{const tabs=await chrome.tabs.query({});return tabs.find(t=>t.url?.startsWith('http://127.0.0.1:8765/index.html')).id;});
   await api(ui,'ENABLE',{origin:base,tabId});
+  await page.locator('#summary').evaluate(el=>{
+    el.value='Synthetic forged input';el.dispatchEvent(new Event('input',{bubbles:true}));
+    const data=new DataTransfer();data.setData('text/plain','Synthetic forged paste'.repeat(100));
+    el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
+  });
+  await wait(400);assert.equal((await api(ui,'STATE')).drafts.length,0);
+  assert.equal(await page.locator('[data-cairn-ui]').count(),0);check('forged input and paste cannot create drafts; no branded host attribute');
   await page.locator('#summary').fill('Synthetic project answer, saved locally.');
   let state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic project answer, saved locally.'));
   const draft=state.drafts.find(d=>d.field.id==='summary');check('typing saves through the real service worker');
-  await page.reload();await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
+  await page.locator('#password').focus();
+  await poll(()=>names(page),items=>items.some(n=>n.includes('not protected in this field')));
+  await page.evaluate(()=>{const el=document.createElement('div');el.id='rich';el.contentEditable='true';el.setAttribute('role','textbox');el.textContent='Synthetic rich editor';document.body.append(el);el.focus();});
+  await poll(()=>names(page),items=>items.some(n=>n.includes('not protected in this field')));
+  check('unsupported and rich-text focus visibly says not protected');
+  await page.evaluate(()=>{document.getElementById('application').autocomplete='off';});
+  await page.locator('#impact').fill('Synthetic autocomplete-off answer');
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic autocomplete-off answer'));
+  check('inherited autocomplete off permits ordinary narrative capture');
+  await page.reload();await waitProtected(page);
   await api(ui,'RESTORE',{id:draft.id,tabId});assert.equal(await page.locator('#summary').inputValue(),draft.text);check('reload and explicit restoration to the original empty field');
   await assert.rejects(api(ui,'RESTORE',{id:draft.id,tabId}));check('nonempty destination is never overwritten');
   await page.getByRole('button',{name:'Simulate session expiry',exact:true}).click();
   await page.getByRole('link',{name:'Return to an empty application',exact:true}).click();
-  await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
+  await waitProtected(page);
   await api(ui,'RESTORE',{id:draft.id,tabId});assert.equal(await page.locator('#summary').inputValue(),draft.text);check('deliberate session-expiry navigation and return recovery');
   await page.locator('textarea[name=detail]').nth(0).fill('Synthetic duplicate one');
   await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic duplicate one'));
@@ -64,7 +98,7 @@ try {
   await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic duplicate two'));
   assert((await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic duplicate one'));check('similar fields keep separate draft records');
   const ambiguous=(await api(ui,'STATE')).drafts.find(d=>d.text==='Synthetic duplicate one');
-  await page.reload();await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
+  await page.reload();await waitProtected(page);
   await assert.rejects(api(ui,'RESTORE',{id:ambiguous.id,tabId}));assert.equal(await page.locator('textarea[name=detail]').nth(0).inputValue(),'');check('duplicate field identities refuse restoration');
   for(const selector of ['#password','#card','#otp','#private','#short'])await page.locator(selector).fill('Synthetic excluded value');
   await page.evaluate(()=>{
@@ -75,20 +109,17 @@ try {
   await wait(500);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic excluded value'));check('password, card, OTP, ignored and short inputs excluded');
   await page.locator('#summary').fill('Synthetic existing');
   const original='Synthetic oversized paste 😀 é '.repeat(30);
-  const stopped=await page.locator('#summary').evaluate((el,text)=>{
-    el.focus();el.setSelectionRange(3,9);const transfer=new DataTransfer();transfer.setData('text/plain',text);
-    const event=new ClipboardEvent('paste',{clipboardData:transfer,bubbles:true,cancelable:true});el.dispatchEvent(event);return event.defaultPrevented;
-  },original);
-  assert(stopped);assert.equal(await page.locator('#summary').inputValue(),'Synthetic existing');
+  await paste(page,'#summary',original,3,9);
+  assert.equal(await page.locator('#summary').inputValue(),'Synthetic existing');
   state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text===original));check('oversized selected-text paste is blocked and full original persisted');
   const pasteCDP=await context.newCDPSession(page);const pasteAX=await pasteCDP.send('Accessibility.getFullAXTree');
   assert(pasteAX.nodes.some(n=>n.role?.value==='dialog'));assert(pasteAX.nodes.some(n=>n.value?.value===original));check('larger editor exposes a labelled dialog and complete original answer to accessibility APIs');
   await page.keyboard.press('Escape');
   // The isolated closed shadow root is deliberately not exposed through page DOM selectors.
   // CDP inspects the accessibility tree, like a screen reader, to verify the dialog and counter.
-  const fitStopped=await page.locator('#summary').evaluate((el)=>{el.focus();el.setSelectionRange(0,el.value.length);const d=new DataTransfer();d.setData('text/plain','fits');const event=new ClipboardEvent('paste',{clipboardData:d,bubbles:true,cancelable:true});el.dispatchEvent(event);return event.defaultPrevented;});
-  assert.equal(fitStopped,false);check('a fitting paste over a selection is allowed');
-  await page.goto(base+'/index.html?token=synthetic#example');await page.waitForSelector('[data-cairn-ui]',{state:'attached'});
+  await paste(page,'#summary','fits');
+  assert.equal(await page.locator('#summary').inputValue(),'fits');check('a fitting trusted paste over a selection is allowed');
+  await page.goto(base+'/index.html?token=synthetic#example');await waitProtected(page);
   await page.locator('#impact').fill('Synthetic query-page answer');
   state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic query-page answer'));
   assert.equal(state.drafts.find(d=>d.text==='Synthetic query-page answer').restorable,false);
@@ -100,21 +131,63 @@ try {
   const before=(await api(ui,'STATE')).library.length;
   await assert.rejects(api(ui,'IMPORT',{raw:'{"format":"draft-cairn-library","version":1,"answers":[{"title":"ok","text":"synthetic"},{"title":4}]}'}));
   assert.equal((await api(ui,'STATE')).library.length,before);check('malformed import is atomic');
-  await worker.evaluate(()=>{globalThis.originalSet=chrome.storage.local.set;chrome.storage.local.set=async()=>{throw new Error('Synthetic storage failure');};});
+  await worker.evaluate(()=>{globalThis.originalSet=chrome.storage.local.set.bind(chrome.storage.local);chrome.storage.local.set=async()=>{throw new Error('Synthetic storage failure');};});
   await page.locator('#impact').fill('Synthetic failed write');await wait(600);
   assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic failed write'));
   const cdp=await context.newCDPSession(page);const ax=await cdp.send('Accessibility.getFullAXTree');
   assert(ax.nodes.some(n=>n.name?.value?.includes('not saved')));check('storage failure preserves earlier data and shows a visible warning');
   await worker.evaluate(()=>{chrome.storage.local.set=globalThis.originalSet;});
+  const keysBefore=await worker.evaluate(async()=>Object.keys(await chrome.storage.local.get(null)).sort());
+  await worker.evaluate(()=>{globalThis.indexRejected=false;chrome.storage.local.set=async values=>{if(values['cairn-v2']){globalThis.indexRejected=true;throw new Error('Synthetic index commit failure');}return globalThis.originalSet(values);};});
+  await page.locator('#impact').fill('Synthetic staged record whose commit fails');await wait(600);
+  assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic staged record whose commit fails'));
+  assert(await worker.evaluate(()=>globalThis.indexRejected),'Failure injection must reach the index commit after staging succeeds');
+  assert.deepEqual(await worker.evaluate(async()=>Object.keys(await chrome.storage.local.get(null)).sort()),keysBefore);
+  await worker.evaluate(()=>{chrome.storage.local.set=globalThis.originalSet;});
+  check('failed encrypted index commit preserves prior state and removes staged records');
+  await api(ui,'SAVE_ANSWER',{answer:{title:'Synthetic unrelated successful write',text:'Must not hide an earlier failure'}});
+  assert((await api(ui,'STATE')).lastError);
+  assert.equal(await worker.evaluate(()=>chrome.action.getBadgeText({})),'!');
+  await api(ui,'ACK_ERROR');assert.equal((await api(ui,'STATE')).lastError,'');check('unrelated successful writes do not clear earlier failure badges');
   await api(ui,'DISABLE',{origin:base});
   await page.locator('#impact').fill('Synthetic while disabled');await wait(500);
   assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic while disabled'));
   await api(ui,'ENABLE',{origin:base,tabId});await page.locator('#impact').fill('Synthetic after re-enabling');
   await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic after re-enabling'));check('turning protection off and on works in an already-open page');
   // Verify expiry is enforced through reads and deletion survives service-worker storage.
-  await worker.evaluate(async()=>{const {state}=await chrome.storage.local.get('state');state.drafts.push({id:'expired-synthetic',expires:0,text:'Expired synthetic'});await chrome.storage.local.set({state});});
+  await worker.evaluate(async()=>{const state=await globalThis.testStore.load();state.drafts.push({id:'expired-synthetic',expires:0,text:'Expired synthetic'});await globalThis.testStore.commit(state);});
   assert(!(await api(ui,'STATE')).drafts.some(d=>d.id==='expired-synthetic'));
   await api(ui,'DELETE_DRAFT',{id:ambiguous.id});assert(!(await api(ui,'STATE')).drafts.some(d=>d.id===ambiguous.id));check('expiry and individual draft deletion');
+  const encrypted=await worker.evaluate(async()=>JSON.stringify(await chrome.storage.local.get(null)));
+  assert(!encrypted.includes('Synthetic') && !encrypted.includes(base) && !encrypted.includes('Northbank'));
+  check('persisted answers, titles and origins are encrypted rather than plaintext');
+  const cap=await worker.evaluate(async()=>{
+    const store=globalThis.testStore, C=globalThis.Cairn;
+    const state=await store.load(), template=state.drafts.find(d=>d.kind==='draft');
+    state.drafts=Array.from({length:180},(_,i)=>({...template,id:`scale-${i}`,key:`scale-${i}`,text:`Synthetic scale ${i}`+'x'.repeat(30000),saved:Date.now()-100000+i}));
+    await store.commit(state);
+    const calls=[];globalThis.originalScaleSet=chrome.storage.local.set.bind(chrome.storage.local);
+    chrome.storage.local.set=async values=>{calls.push(new TextEncoder().encode(JSON.stringify(values)).length);return globalThis.originalScaleSet(values);};
+    globalThis.scaleCalls=calls;return C.stateBytes(state);
+  });
+  assert(cap>5*1024*1024);
+  const started=Date.now();await page.locator('#impact').fill('Synthetic newest answer after 180 drafts');
+  try {
+    state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic newest answer after 180 drafts'));
+  } catch {
+    const failed=await api(ui,'STATE');
+    const status=(await names(page)).filter(n=>n.startsWith('Draft Cairn ·'));
+    const cause=await worker.evaluate(()=>globalThis.testError);
+    throw new Error(`Scale capture failed: count=${failed.drafts.length}, error=${failed.lastError}, status=${status[0]}, cause=${JSON.stringify(cause)}`);
+  }
+  const scale=await worker.evaluate(()=>{chrome.storage.local.set=globalThis.originalScaleSet;return {writes:globalThis.scaleCalls};});
+  assert.equal(state.drafts.length,180);assert(!state.drafts.some(d=>d.id==='scale-0'));assert(state.evicted>0);
+  assert(Math.max(...scale.writes)<100000,'Saving one small draft must not rewrite a multi-megabyte dataset');
+  console.log(`Scale check: ${cap} plaintext bytes; largest save write ${Math.max(...scale.writes)} bytes; observed ${Date.now()-started} ms including debounce/poll.`);
+  check('capture continues at 180 drafts near 6 MB with incremental encrypted writes');
+  // Re-registration with unchanged patterns must not unregister/update the script.
+  await worker.evaluate(()=>{globalThis.registrationCalls=[];for(const method of ['registerContentScripts','unregisterContentScripts','updateContentScripts']){const original=chrome.scripting[method].bind(chrome.scripting);chrome.scripting[method]=async(...args)=>{globalThis.registrationCalls.push(method);return original(...args);};}});
+  await api(ui,'ENABLE',{origin:base,tabId});assert.deepEqual(await worker.evaluate(()=>globalThis.registrationCalls),[]);check('unchanged host patterns leave registered content scripts in place');
   const durable=(await api(ui,'STATE')).library.length;
   const durableDraftIds=(await api(ui,'STATE')).drafts.map(d=>d.id).sort();assert(durableDraftIds.length>0);
   await context.close();({worker,id,ui}=await launch());assert.equal((await api(ui,'STATE')).library.length,durable);
@@ -128,9 +201,44 @@ try {
   await ui.getByRole('button',{name:'Answer library',exact:true}).click();await ui.screenshot({path:path.join(screenshots,'library.png')});
   await ui.setViewportSize({width:390,height:844});assert.equal(await ui.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);check('workspace fits a 390px viewport');
   await api(ui,'DISABLE',{origin:base,erase:true});assert(!(await api(ui,'STATE')).drafts.some(d=>d.origin===base));
-  await api(ui,'CLEAR');state=await api(ui,'STATE');assert.equal(state.library.length+state.drafts.length+state.sites.length,0);check('site erasure and all-data deletion');
+  await api(ui,'CLEAR');state=await api(ui,'STATE');assert.equal(state.library.length+state.drafts.length+state.sites.length,0);
+  assert.deepEqual(await worker.evaluate(()=>chrome.storage.local.get(null)),{});
+  assert(!(await worker.evaluate(()=>indexedDB.databases())).some(db=>db.name==='cairn-keys'));check('site erasure and all-data deletion include ciphertext and local key');
+  await worker.evaluate(async()=>{
+    const state=globalThis.Cairn.fresh();
+    state.library=[{id:'legacy-answer',title:'Synthetic legacy title',text:'Synthetic legacy answer',project:'Migration',saved:Date.now()}];
+    await chrome.storage.local.clear();await chrome.storage.local.set({state});
+  });
+  await context.close();({worker,id,ui}=await launch());
+  assert((await api(ui,'STATE')).library.some(a=>a.id==='legacy-answer'));
+  assert(!JSON.stringify(await worker.evaluate(()=>chrome.storage.local.get(null))).includes('Synthetic legacy'));
+  check('legacy plaintext state migrates to encrypted records without losing library answers');
+  const keyInfo=await worker.evaluate(async()=>{
+    const db=await new Promise(resolve=>{const request=indexedDB.open('cairn-keys',1);request.onsuccess=()=>resolve(request.result);});
+    const key=await new Promise(resolve=>{const request=db.transaction('keys').objectStore('keys').get('aes');request.onsuccess=()=>resolve(request.result);});
+    db.close();let rejected=false;try{await crypto.subtle.exportKey('raw',key);}catch{rejected=true;}
+    return {extractable:key.extractable,name:key.algorithm.name,length:key.algorithm.length,rejected};
+  });
+  assert.deepEqual(keyInfo,{extractable:false,name:'AES-GCM',length:256,rejected:true});check('AES-256 key persists in IndexedDB and cannot be exported through Web Crypto');
+  const integrity=await ui.evaluate(async()=>{
+    const original=await chrome.storage.local.get('cairn-v2'), bad=structuredClone(original['cairn-v2']);
+    bad.data=(bad.data[0]==='A'?'B':'A')+bad.data.slice(1);await chrome.storage.local.set({'cairn-v2':bad});
+    let rejected=false;
+    try{await (await import('./storage.js?integrity')).load();}catch{rejected=true;}
+    const preserved=(await chrome.storage.local.get('cairn-v2'))['cairn-v2'].data===bad.data;
+    await chrome.storage.local.set(original);return {rejected,preserved};
+  });
+  assert.deepEqual(integrity,{rejected:true,preserved:true});check('ciphertext tampering fails closed and preserves stored data');
+  await api(ui,'DISABLE',{origin:base});
+  await ui.evaluate(async origin=>chrome.storage.session.set({'enable-closed-popup':{origin,created:Date.now()}}),base);
+  // Trigger the same queued handler as permissions.onAdded, with no popup alive.
+  await api(ui,'FINISH_ENABLE');assert((await api(ui,'STATE')).sites.includes(base));
+  await ui.evaluate(async origin=>chrome.storage.session.set({'enable-expired':{origin:'http://127.0.0.1:9999',created:Date.now()-180000}}),base);
+  await api(ui,'FINISH_ENABLE');assert(!(await api(ui,'STATE')).sites.includes('http://127.0.0.1:9999'));
+  check('worker completes a pending enable without a popup and rejects expired intent');
+  await api(ui,'CLEAR');
   await mkdir(path.join(root,'test-results'),{recursive:true});
-  await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({browser:context.browser()?.version(),automated:report,permissionPrompt:'not automated; temporary loopback host pre-grant; native removal simulated',syntheticOnly:true},null,2));
+  await writeFile(path.join(root,'test-results','browser-summary.json'),JSON.stringify({browser:context.browser()?.version(),automated:report,permissionPrompt:'not automated; temporary loopback host pre-grant; native removal simulated',clipboard:'browser clipboard populated by API, trusted keyboard paste; daily-use OS clipboard still manual',syntheticOnly:true},null,2));
 } finally {
   await context?.close();server.kill();
   assert.equal(path.dirname(path.resolve(temp)),path.resolve(tmpdir()));

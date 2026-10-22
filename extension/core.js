@@ -4,6 +4,7 @@
   const MAX_BYTES = 6 * 1024 * 1024;
   const MAX_DRAFTS = 180;
   const MAX_LIBRARY = 300;
+  const LIBRARY_BYTES = MAX_BYTES - 700 * 1024; // reserve room for one maximum-size recovery record
   const DAY = 86400000;
   const fail = message => { throw new Error(message); };
   const str = (s, max, optional = false) => {
@@ -20,14 +21,20 @@
     const u = new URL(originOf(origin));
     return `${u.protocol}//${u.hostname}/*`;
   }
-  const sensitive = /password|passwd|passcode|secret|token|api.?key|one.?time|otp|verification|credit|card|payment|cvv|cvc|iban|bank|routing|social.?security|ssn|passport|tax.?id|pin\b/i;
+  const tokens = s => (s || '').replace(/([a-z])([A-Z])/g,'$1 $2').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const sensitive = /\b(password|passwd|passcode|secret|token|otp|cvv|cvc|iban|ssn|passport|pin)\b|\b(api key|one time code|social security|tax id|bank account|account number|routing number|card number|credit card|debit card|payment card|security code|verification code)\b/;
+  const sensitiveAutocomplete = /^(?:cc-.+|.*password|one-time-code|webauthn|username|name|given-name|additional-name|family-name|honorific-prefix|honorific-suffix|nickname|email|tel(?:-.+)?|street-address|address-.+|postal-code|country(?:-name)?|bday(?:-.+)?|sex|photo|url|impp|transaction-.+)$/;
   function allowedField(f) {
     if (!f.visible || f.disabled || f.readOnly || f.private) return false;
     if (!['TEXTAREA', 'INPUT'].includes(f.tag)) return false;
     if (f.tag === 'INPUT' && (f.type !== 'text' || f.maxLength < 120)) return false;
-    const autocomplete = (f.autocomplete || '').toLowerCase();
-    if (autocomplete && autocomplete !== 'on') return false;
-    return !sensitive.test([f.id, f.name, f.label, f.placeholder].join(' '));
+    const autocomplete = (f.autocomplete || '').toLowerCase().split(/\s+/);
+    if (autocomplete.some(t => sensitiveAutocomplete.test(t))) return false;
+    // off controls browser suggestions, not sensitivity. Descriptive narrative labels
+    // such as "payment schedule" or "scorecard summary" are not credential hints.
+    const identifiers = [f.id, f.name].map(tokens);
+    if (identifiers.some(s => sensitive.test(s) || /\b(card|payment|bank|routing|verification|credit)\b/.test(s))) return false;
+    return ![f.label, f.placeholder].some(s => sensitive.test(tokens(s)) || /^(bank details|payment details|card details)$/.test(tokens(s)));
   }
   function pasteCapacity(value, start, end, pasted, limit) {
     // maxlength is measured in UTF-16 code units, including surrogate pairs.
@@ -40,22 +47,40 @@
     return state;
   }
   function fresh() { return {version: 1, days: 7, sites: [], drafts: [], library: []}; }
+  const sizes = new WeakMap();
+  function bytes(value) {
+    if (Object.isFrozen(value) && sizes.has(value)) return sizes.get(value);
+    const size = new TextEncoder().encode(JSON.stringify(value)).length;
+    if (Object.isFrozen(value)) sizes.set(value,size);
+    return size;
+  }
+  function stateBytes(state) {
+    return bytes({...state,drafts:[],library:[]}) +
+      [state.drafts,state.library].reduce((total,items)=>total + items.reduce((sum,item)=>sum+bytes(item),0) + Math.max(0,items.length-1),0);
+  }
   function bounded(state) {
     if (state.drafts.length > MAX_DRAFTS || state.library.length > MAX_LIBRARY ||
-      new TextEncoder().encode(JSON.stringify(state)).length > MAX_BYTES) {
+      stateBytes(state) > MAX_BYTES) {
       fail('Local storage is full. Your last change was not saved. Export library answers or delete older drafts, then try again.');
     }
     return state;
   }
+  function libraryBounded(state) {
+    if (state.library.length > MAX_LIBRARY || bytes(state.library) > LIBRARY_BYTES)
+      fail('Local storage for library answers is full. Export or delete library answers before adding more. Recovery capacity is reserved separately.');
+    return bounded(state);
+  }
   function addDraft(state, incoming, now = Date.now()) {
-    const text = str(incoming.text, MAX_TEXT);
+    if (typeof incoming.text !== 'string' || incoming.text.length > MAX_TEXT)
+      fail('Invalid draft: answers over 100,000 UTF-16 units cannot be saved. Keep a separate copy.');
+    const text = incoming.text;
     if (!text) return state;
     prune(state, now);
     const key = incoming.key;
     const same = state.drafts.filter(d => d.key === key).sort((a,b) => b.saved - a.saved);
     if (same[0]?.text === text) return state;
     let started = now;
-    // Keep the current edit plus up to three earlier snapshots. Do not evict other fields.
+    // Keep the current edit plus up to three earlier snapshots.
     if (same[0] && now - (same[0].started ?? same[0].saved) < 30000 && incoming.kind !== 'paste') {
       started = same[0].started ?? same[0].saved;
       state.drafts = state.drafts.filter(d => d.id !== same[0].id);
@@ -65,6 +90,15 @@
     state.drafts = state.drafts.filter(d => !remove.has(d.id));
     state.drafts.unshift({...incoming, text, id: crypto.randomUUID(), saved: now, started,
       expires: now + (incoming.kind === 'paste' ? Math.min(state.days * DAY, 3600000) : state.days * DAY)});
+    // Recovery is a rolling safety net; never let old drafts prevent a new save.
+    // Explicit library answers are never evicted. If they alone exhaust capacity,
+    // fail visibly rather than claiming the latest answer was saved.
+    while (state.drafts.length > 1 && (state.drafts.length > MAX_DRAFTS || stateBytes(state) > MAX_BYTES)) {
+      let oldest = 1;
+      for (let i=2;i<state.drafts.length;i++) if (state.drafts[i].saved < state.drafts[oldest].saved) oldest=i;
+      state.drafts.splice(oldest,1);
+      state.evicted = (state.evicted || 0) + 1;
+    }
     return bounded(state);
   }
   function libraryItem(item) {
@@ -91,5 +125,5 @@
     return hits.length === 1 && (saved.field.id || saved.field.name) ? hits[0] : null;
   }
   globalThis.Cairn = Object.freeze({MAX_TEXT, MAX_BYTES, MAX_DRAFTS, MAX_LIBRARY, DAY, originOf, hostPattern,
-    allowedField, pasteCapacity, prune, fresh, bounded, addDraft, libraryItem, parseImport, fieldIdentity, matchField});
+    allowedField, pasteCapacity, prune, fresh, bounded, libraryBounded, stateBytes, addDraft, libraryItem, parseImport, fieldIdentity, matchField});
 })();

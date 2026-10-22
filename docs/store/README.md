@@ -11,7 +11,7 @@ The original mark is a small cairn: three cream stones on deep green. It suggest
 | `small-promo.svg` | Editable promotional composition. System font rendering can vary by editor. |
 | `small-promo.png` | Required small promotional image, 440×280. |
 | `readme-header.svg` | Editable GitHub README banner, 960×250. |
-| `../images/recovery.png`, `../images/library.png` | Real extension screenshots with synthetic fixture answers, 1280×800. The 0.1.1 patch changes only the store icon; the depicted interface and behavior are unchanged from the recorded 0.1.0 browser run. |
+| `../images/recovery.png`, `../images/library.png` | Real extension screenshots with synthetic fixture answers, 1280×800. These images show the recovery and library interface with synthetic data; validation records identify the exact browser run. Native Chrome permission checks remain separate. |
 | `listing/listing.txt` (inside the kit) | Name, short description, and detailed description, generated from the canonical listing document. |
 | `reviewer-instructions.txt` | Synthetic reviewer test steps, with no credentials required. |
 | `manual-smoke-test.md` | Unmodified-package permission and clipboard checks still required before submission. |

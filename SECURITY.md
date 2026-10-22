@@ -9,10 +9,11 @@ For a vulnerability, use GitHub's private vulnerability reporting feature if it 
 - Protect against accidental form loss, not a compromised device, malicious extension, malicious website, or browser-profile theft.
 - Per-origin opt-in is checked in the service worker on every capture. Chrome match patterns grant host access across ports; Draft Cairn additionally checks the exact origin. Content scripts run only in the top-level frame and isolated world. No external message handler is exposed.
 - Storage access is restricted to trusted extension contexts. The worker serializes writes, derives the origin/page fingerprint from Chrome's sender metadata, validates length and fields, and caps the store at 6 MiB, 180 revisions, 300 library answers, and 100,000 UTF-16 units per answer.
-- Reaching a limit rejects the new write with a visible warning. Existing successfully stored data is preserved. No automatic cross-field eviction. Revision replacement only affects the currently edited field.
+- Recovery uses oldest-first eviction at the count/byte limit, with a visible eviction notice. Explicit library answers are never evicted. Library capacity reserves 700 KiB for recovery; other write failures remain visible until acknowledged. Record writes are incremental, and an encrypted index is published only after changed encrypted records are staged.
+- Capture ignores untrusted synthetic input/paste events. This prevents direct event-dispatch flooding, but a hostile website can still manipulate its own fields during real user interaction or remove/spoof page UI. There is no claim of undetectability; the visible on-page UI can reveal the extension.
 - User content is rendered as text. The extension CSP prohibits remote scripts, objects, and connections. No dependencies are shipped in the extension ZIP.
 - Restoration is explicit, unique-match-only, empty-field-only, and disallowed on query/fragment pages. It verifies the current form structure and declared limit. Field identifiers can still be reused semantically by websites; inspect restored answers.
-- Sensitive-field filters are heuristic and conservative. They do not make narrative client information safe to retain. Browser-local storage is not encrypted by the extension.
+- Sensitive-field filters are heuristic and conservative. They do not make narrative client information safe to retain. Records and settings use AES-256-GCM; the non-extractable key lives in extension-origin IndexedDB in the same profile. This protects persisted values from plaintext inspection, not from someone controlling the profile, browser, or device. No password or external key service is involved. Missing keys or authentication failures preserve the data and fail closed.
 
 ## Review before release
 
