@@ -1,4 +1,8 @@
-An early, free, MIT-licensed preview for local recovery of long application answers.
+Draft Cairn 0.1.1 — store preparation patch to the free, MIT-licensed local recovery preview.
+
+This patch corrects the 128px store icon to a 96px mark with 16px transparent margins, adds editable brand sources and a 512px preview, and provides a separate store-upload kit with screenshots, promotional tile, listing copy, reviewer steps, privacy policy, and submission checklist. Recovery behavior and permissions are unchanged from 0.1.0.
+
+The kit is ready to prepare a listing. Final tests of the unmodified extension's native Chrome permission prompt/revocation and actual OS clipboard interaction are still required before submission. No store upload or submission has been performed.
 
 - Explicit website protection with optional host access.
 - Bounded local revisions, seven-day default retention, preview/copy, and explicit restore to confidently matched empty fields.

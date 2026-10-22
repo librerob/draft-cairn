@@ -1,0 +1,16 @@
+# Final Chrome smoke test
+
+Status: **not yet performed on the unmodified 0.1.1 ZIP**. Automated Chromium tests use a test-only localhost host grant; they cannot stand in for these checks. Use only synthetic text. Stop submission if a required step fails.
+
+1. Extract `draft-cairn-0.1.1.zip` and load that extracted folder in a fresh supported Chrome profile via `chrome://extensions` → Developer mode → Load unpacked. Pin the extension. Do not change its manifest or permissions.
+2. Run `node scripts/demo.mjs` from a source checkout and open `http://127.0.0.1:8765/index.html` in that Chrome profile. Before enabling protection, type a synthetic answer. Confirm no draft is captured.
+3. Open the popup and choose Enable for this site. Deny Chrome's native access request. Confirm protection stays off. Repeat and approve. Type a new synthetic answer in Project summary and wait for “saved on this device”.
+4. Reload the demo, open Recovery & library, and restore the saved answer into the now-empty Project summary field. Check it is exact. Put new text in the destination and confirm restoration refuses to overwrite it.
+5. Use the demo's Copy synthetic long answer button and **the OS paste shortcut** in Project summary. Test once with existing text and once with some text selected. An oversized paste must leave the field unchanged and show the complete original in the larger editor. Use Tab, Shift+Tab, and Escape to inspect focus and close behavior. Copy from the editor and paste into a disposable local text editor to verify exact content.
+6. Save a synthetic library answer, export it, delete it, and import the exported file. Verify search, project, and copying. Delete the exported test file yourself afterward if desired.
+7. Close and fully restart Chrome. Confirm retained drafts and the explicit library answer remain. Use the session-expiry button and recover after returning to the empty form.
+8. Turn protection off in the popup, type another distinct synthetic answer, and confirm it is not captured. Re-enable in the same page. Separately revoke this site's access through Chrome's extension controls; confirm further capture stops. Check status/error messages are understandable.
+9. Check the two identically labelled fields refuse direct restoration. Check password, payment, one-time-code, ignored-note, and short-input fixture values are absent from recovery.
+10. Delete site data, then all extension data. Confirm the relevant records and site access are gone. Use synthetic data on at least one intended application portal too, with permission to do so; record the exact portal and supported/unsupported fields privately without saving actual client text.
+
+Record Chrome/OS version, date, pass/fail, and any issue using synthetic descriptions. The local Windows environment blocked the downloaded Chrome for Testing binary by application-control policy; that policy was not bypassed. Native Chrome permission and OS clipboard checks remain a submission gate until the owner or an available compatible environment completes them.

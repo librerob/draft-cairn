@@ -123,7 +123,7 @@ try {
   await api(ui,'SAVE_ANSWER',{answer:{title:'Workshop accessibility',project:'Northbank',text:'Synthetic approved wording: our workshop offers step-free access, quiet sessions, and materials in accessible formats.'}});
   await ui.reload();await ui.waitForFunction(()=>document.getElementById('summary').textContent.includes('revisions'));
   // Documentation screenshots contain only fixture data and use the unmodified shipped UI.
-  const screenshots=path.join(root,'docs','images');await mkdir(screenshots,{recursive:true});
+  const screenshots=path.join(root,'test-results','screenshots');await mkdir(screenshots,{recursive:true});
   await ui.screenshot({path:path.join(screenshots,'recovery.png')});
   await ui.getByRole('button',{name:'Answer library',exact:true}).click();await ui.screenshot({path:path.join(screenshots,'library.png')});
   await ui.setViewportSize({width:390,height:844});assert.equal(await ui.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);check('workspace fits a 390px viewport');

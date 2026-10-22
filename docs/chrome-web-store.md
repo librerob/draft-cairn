@@ -2,6 +2,14 @@
 
 Checked 22 October 2026. No upload, payment, registration, or store submission has been performed.
 
+## Readiness
+
+The **0.1.1 preparation kit contains every mandatory image asset**, the install ZIP, listing copy, privacy policy, and reviewer instructions. The store icon has a 96×96 design inside its 128×128 PNG with 16px transparent margins. The promotional tile is 440×280; both real-interface screenshots are 1280×800. Dimensions and margins are checked by `scripts/check-assets.py` against the current official image guide.
+
+**Submission remains pending final manual checks:** load the unmodified ZIP in a fresh Chrome profile, test the real optional host-permission approval/denial/revocation, actual OS clipboard paste/copy, and an intended application portal with synthetic data. The [manual smoke-test worksheet](store/manual-smoke-test.md) gives the exact steps. Browser CI pre-grants localhost access, so it does not verify those native flows. The owner's developer account, verification, and distribution settings must also be completed in the dashboard.
+
+Download `draft-cairn-store-kit-0.1.1.zip` from GitHub Releases and extract it. **Only upload the inner `extension/draft-cairn-0.1.1.zip` as the package.** The outer kit is a preparation folder, not an installable extension. Upload the files under `listing/` separately into their respective image/text fields. Editable brand sources stay in `docs/store/` in the source repository.
+
 ## Draft listing
 
 **Name:** Draft Cairn
@@ -58,7 +66,7 @@ No remotely hosted code, externally connectable API, analytics, or server commun
 - [ ] Review limitations and privacy policy for the exact version. Do not call the preview production-ready or universally compatible.
 - [ ] Register/sign in to the intended Google developer account, verify email and publisher details, enable required two-step verification, and complete any identity/trader/contact verification currently required. Owner accepts legal agreements personally.
 - [ ] Confirm the one-time registration fee (official source: US$5) and obtain explicit payment authorization before paying. No recurring services are required.
-- [ ] Run CI and deterministic packaging. Verify `SHA256SUMS`. Upload only `draft-cairn-0.1.0.zip`, with `manifest.json` at its root.
+- [ ] Run CI and deterministic packaging. Verify `SHA256SUMS`. Upload only `draft-cairn-0.1.1.zip`, with `manifest.json` at its root.
 - [ ] Supply the original 128×128 icon from `extension/icons/128.png`. The synthetic screenshots `docs/images/recovery.png` and `docs/images/library.png` are prepared at 1280×800. Review them against the current [image guide](https://developer.chrome.com/docs/webstore/images) before upload; they show the real extension UI with synthetic fixtures.
 - [ ] Review and upload the prepared 440×280 small promotional tile, `docs/store/small-promo.png`, and any desired optional assets under the current image guide. No invented customers, rankings, or paid offers are included.
 - [ ] Fill listing, single purpose, permission justifications, remote-code declaration, data-use/privacy fields, distribution, support/privacy URLs, and test instructions. Check consistency with `PRIVACY.md`.

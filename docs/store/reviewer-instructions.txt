@@ -1,0 +1,14 @@
+Draft Cairn 0.1.1 preview — synthetic reviewer test instructions
+
+No account, payment, reviewer credentials, remote service, or client data is needed.
+
+Source and local demo: https://github.com/librerob/draft-cairn
+1. In a source checkout with Node.js 24, run: node scripts/demo.mjs
+2. Open http://127.0.0.1:8765/index.html in Chrome. The extension is inactive until the reviewer enables protection for that site from its toolbar popup and approves the optional host permission.
+3. Type a synthetic answer in Project summary. Wait for the on-page “saved on this device” status. Reload, then open Recovery & library. Preview/copy the saved answer or explicitly restore it into the original empty field.
+4. Existing text is never overwritten. The two Additional detail fields have duplicate identities and support copying rather than direct restoration. Query/fragment pages are copy-only.
+5. Use Copy synthetic long answer in the demo, then paste into Project summary (maxlength 500). An oversized paste is stopped; a labelled larger editor shows the complete original and character counter. The original is saved temporarily for up to one hour if the storage write succeeds. Custom website limits are not detected.
+6. In Answer library, save a synthetic answer with a title and optional project. Search, copy, export/import v1 JSON, and delete it. Exports contain plain-text answers and have an explicit warning.
+7. Sites & settings controls retention (seven days by default), disabling protection, deleting site data, and deleting all extension data.
+
+Only standard top-level textareas and long ordinary text inputs are supported. Password/payment/OTP/hidden and sensitive-hint fields, rich text editors, frames, and incognito are excluded. Filtering cannot identify every sensitive answer. Text that has not finished saving can be lost. Storage stays in this browser profile and is not encrypted by Draft Cairn. No analytics, external answer transmission, remotely hosted code, or paid features are present.

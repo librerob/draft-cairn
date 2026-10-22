@@ -2,6 +2,8 @@
 
 22 October 2026 · synthetic fixtures only
 
+Store-preparation patch 0.1.1 changes the 128px icon, version metadata, and packaging/docs only; recovery behavior and permissions are unchanged. The icon now uses Google's 96px artwork / 16px transparent-margin layout. `scripts/check-assets.py` checks all store PNG sizes and the icon alpha bounds. The full existing CI suite runs for this patch too. Native permission/clipboard manual checks below remain pending. The 0.1.0 validation record is preserved for provenance rather than relabelled as 0.1.1 evidence.
+
 Verified on commit `370d004dddf9b170a06c1ab44ec26aac92cd1a43`: **8 unit groups and 20 Chromium integration scenarios passed**, including all retained draft IDs and library count surviving a real browser-process restart. Browser: Chromium 151.0.7922.34 on Ubuntu 24.04. [Validation run](https://github.com/librerob/draft-cairn/actions/runs/39828150956) and [gated release run](https://github.com/librerob/draft-cairn/actions/runs/39828270784) both succeeded. The [machine-readable result](validation-results.json) lists the exact scenarios and test-grant limitations.
 
 The Windows and Linux release packages were compared byte for byte. SHA-256: `c84cd3c63a3c8e488c07d1018b2797066fe0d31237638d946ac54861faee6b3a`. The local demo's expiry/return flow was also manually verified in the in-app Chromium browser; this was a demo check, not a local extension installation test.

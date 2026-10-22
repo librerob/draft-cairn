@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the validated v0.1.0 preview release
+        description: Publish the validated manifest version as a preview release
         type: boolean
         default: false
 permissions:
@@ -22,6 +22,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: node scripts/check.mjs
+      - run: python3 scripts/check-assets.py
       - run: npm test
       - run: npx playwright install chromium
       - run: npm run test:browser
@@ -37,7 +38,7 @@ jobs:
           path: |
             dist/
             test-results/browser-summary.json
-            docs/images/*.png
+            test-results/screenshots/*.png
           retention-days: 14
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
@@ -51,4 +52,6 @@ jobs:
       - name: Publish preview
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create v0.1.0 dist/draft-cairn-0.1.0.zip dist/SHA256SUMS --target "$GITHUB_SHA" --prerelease --title "Draft Cairn 0.1.0 · preview" --notes-file docs/release-notes.md
+        run: |
+          version="$(node -p "require('./extension/manifest.json').version")"
+          gh release create "v$version" "dist/draft-cairn-$version.zip" "dist/draft-cairn-store-kit-$version.zip" dist/SHA256SUMS --target "$GITHUB_SHA" --prerelease --title "Draft Cairn $version · preview" --notes-file docs/release-notes.md
