@@ -248,7 +248,10 @@ try {
   assert.deepEqual(keyInfo,{extractable:false,name:'AES-GCM',length:256,rejected:true});check('automatic AES-256 key persists as a nonextractable CryptoKey');
   const integrity=await ui.evaluate(async()=>{
     const db=await new Promise(resolve=>{const r=indexedDB.open('cairn-data-v3');r.onsuccess=()=>resolve(r.result);});
-    const index=await new Promise(resolve=>{const r=db.transaction('meta').objectStore('meta').get('index');r.onsuccess=()=>resolve(r.result);});
+    const {open}=await import('./crypto.js');
+    const indexKey=await new Promise(resolve=>{const r=db.transaction('keys').objectStore('keys').get('index');r.onsuccess=()=>resolve(r.result);});
+    const rawIndex=await new Promise(resolve=>{const r=db.transaction('meta').objectStore('meta').get('index');r.onsuccess=()=>resolve(r.result);});
+    const index=await open(rawIndex,indexKey,'draft-cairn-index-v3');
     const ref=index.library[0].ref;
     const original=await new Promise(resolve=>{const r=db.transaction('records').objectStore('records').get(ref);r.onsuccess=()=>resolve(r.result);});
     const bad=structuredClone(original);bad.body.data=(bad.body.data[0]==='A'?'B':'A')+bad.body.data.slice(1);
@@ -355,7 +358,7 @@ try {
   });assert(migrationSize>5*1024*1024);
   await worker.evaluate(()=>{
     globalThis.atomicPut=IDBObjectStore.prototype.put;globalThis.rekeyAborted=false;
-    IDBObjectStore.prototype.put=function(value,key){if(this.name==='meta'&&key==='index'&&value.mode==='vault'){globalThis.rekeyAborted=true;this.transaction.abort();throw new Error('Synthetic vault migration failure');}return globalThis.atomicPut.call(this,value,key);};
+    IDBObjectStore.prototype.put=function(value,key){if(this.name==='meta'&&key==='index'){globalThis.rekeyAborted=true;this.transaction.abort();throw new Error('Synthetic vault migration failure');}return globalThis.atomicPut.call(this,value,key);};
   });
   await assert.rejects(api(ui,'VAULT_ENABLE',{passphrase:password,acknowledged:true}));
   assert(await worker.evaluate(()=>globalThis.rekeyAborted));await worker.evaluate(()=>{IDBObjectStore.prototype.put=globalThis.atomicPut;});
