@@ -226,12 +226,12 @@ try {
   // Check system-following and explicit overrides on real extension pages.
   await ui.emulateMedia({colorScheme:'light'});
   await poll(()=>ui.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),v=>v==='light');
-  await ui.screenshot({path:path.join(screenshots,'recovery.png')});
-  await ui.getByRole('button',{name:'Answer library',exact:true}).click();await ui.screenshot({path:path.join(screenshots,'library.png')});
+  await ui.screenshot({animations:'disabled',path:path.join(screenshots,'recovery.png')});
+  await ui.getByRole('button',{name:'Answer library',exact:true}).click();await ui.screenshot({animations:'disabled',path:path.join(screenshots,'library.png')});
   await ui.emulateMedia({colorScheme:'dark'});
   await poll(()=>ui.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),v=>v==='dark');
-  await ui.screenshot({path:path.join(screenshots,'library-dark.png')});
-  await ui.getByRole('button',{name:'Recovery drafts',exact:true}).click();await ui.screenshot({path:path.join(screenshots,'recovery-dark.png')});
+  await ui.screenshot({animations:'disabled',path:path.join(screenshots,'library-dark.png')});
+  await ui.getByRole('button',{name:'Recovery drafts',exact:true}).click();await ui.screenshot({animations:'disabled',path:path.join(screenshots,'recovery-dark.png')});
   check('workspace follows live system light/dark changes');
   await ui.getByRole('button',{name:'Sites & settings',exact:true}).click();
   await ui.locator('#appearance').selectOption('light');
@@ -241,7 +241,7 @@ try {
   assert.equal(await ui.evaluate(()=>document.documentElement.dataset.theme),'light');
   await ui.getByRole('button',{name:'Sites & settings',exact:true}).click();await ui.locator('#appearance').selectOption('dark');
   await poll(()=>ui.evaluate(()=>document.documentElement.dataset.theme),v=>v==='dark');
-  await ui.screenshot({path:path.join(screenshots,'settings-dark.png')});
+  await ui.screenshot({animations:'disabled',path:path.join(screenshots,'settings-dark.png')});
   const themedSite=await context.newPage();await themedSite.emulateMedia({colorScheme:'light'});await themedSite.goto(base+'/index.html?theme=synthetic');await waitProtected(themedSite);
   await themedSite.locator('#impact').focus();await clickAccessible(themedSite,name=>name.startsWith('Draft Cairn ·'));
   await poll(()=>accessibleStyle(themedSite,'dialog'),s=>s['background-color']==='rgb(26, 33, 28)');
@@ -258,9 +258,9 @@ try {
   await ui.locator('#appearance').selectOption('light');
   await poll(()=>popup.evaluate(()=>document.documentElement.dataset.theme),v=>v==='light');
   check('explicit appearance overrides persist after reload and synchronize with the popup');
-  await popup.screenshot({path:path.join(screenshots,'popup-light.png')});
+  await popup.screenshot({animations:'disabled',path:path.join(screenshots,'popup-light.png')});
   await ui.locator('#appearance').selectOption('dark');await poll(()=>popup.evaluate(()=>document.documentElement.dataset.theme),v=>v==='dark');
-  await popup.screenshot({path:path.join(screenshots,'popup-dark.png')});
+  await popup.screenshot({animations:'disabled',path:path.join(screenshots,'popup-dark.png')});
   await ui.getByRole('button',{name:'Answer library',exact:true}).click();await ui.getByRole('button',{name:'Save an answer',exact:true}).click();
   const editorStyle=await ui.locator('#answer-dialog').evaluate(el=>({background:getComputedStyle(el).backgroundColor,scheme:getComputedStyle(el).colorScheme}));
   assert.equal(editorStyle.background,'rgb(26, 33, 28)');assert.equal(editorStyle.scheme,'dark');await ui.locator('#close-editor').click();

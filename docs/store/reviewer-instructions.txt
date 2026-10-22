@@ -1,4 +1,4 @@
-Draft Cairn 0.2.0 preview — synthetic reviewer test instructions
+Draft Cairn 0.2.1 preview — synthetic reviewer test instructions
 
 No account, payment, reviewer credentials, remote service, or client data is needed.
 
@@ -23,3 +23,5 @@ Only standard top-level textareas and long ordinary text inputs are supported. P
 - In the on-page larger editor choose Never capture this field. Verify it says not protected and stops saving; allow it again in settings. Block/unblock a site through the popup/settings.
 - Test popup Delete all while locked, using disposable synthetic answers only.
 
+
+Appearance: in Sites & settings choose System, Light or Dark. System follows OS/browser preference changes. Explicit choices override that preference and apply to the popup and on-page editor too. Appearance remains changeable while the vault is locked.

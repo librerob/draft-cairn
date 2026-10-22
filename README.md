@@ -26,14 +26,14 @@ This is an early preview. Commercial demand and broad compatibility have not bee
 
 ## Install
 
-1. Download `draft-cairn-0.2.0.zip` from [Releases](https://github.com/librerob/draft-cairn/releases), verify it against `SHA256SUMS`, and extract it.
+1. Download `draft-cairn-0.2.1.zip` from [Releases](https://github.com/librerob/draft-cairn/releases), verify it against `SHA256SUMS`, and extract it.
 2. Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`.
 3. Pin Draft Cairn. On an ordinary HTTP/HTTPS website, open its popup and choose **Enable for this site**. Approve Chrome's site-access request.
 4. Type in a supported field and wait for **saved on this device**. Open **Recovery & library** to inspect saved text.
 
 For a source checkout, load the `extension/` folder directly. Chrome 120 or later is required. This release is not on the Chrome Web Store; no store submission or payment has been made.
 
-Preparing a store listing? The release also includes a separate `draft-cairn-store-kit-0.2.0.zip` with the icon, promotional tile, real-interface screenshots, listing copy, and reviewer instructions. Extract it and use its inner extension ZIP for the package upload. [Asset guide](docs/store/README.md) · [Final manual checks](docs/store/manual-smoke-test.md). Those manual permission and clipboard checks remain pending; prepared assets do not imply store approval.
+Preparing a store listing? The release also includes a separate `draft-cairn-store-kit-0.2.1.zip` with the icon, promotional tile, real-interface screenshots, listing copy, and reviewer instructions. Extract it and use its inner extension ZIP for the package upload. [Asset guide](docs/store/README.md) · [Final manual checks](docs/store/manual-smoke-test.md). Those manual permission and clipboard checks remain pending; prepared assets do not imply store approval.
 
 ## What it saves
 
@@ -43,6 +43,10 @@ Preparing a store listing? The release also includes a separate `draft-cairn-sto
 - Library answers with a title and optional project. These remain until deleted; import/export uses a [documented v1 format](docs/library-format.md).
 
 The current release supports only the top-level page. Rich text editors, contenteditable, frames, browser-internal pages, and incognito are excluded. See [compatibility](docs/compatibility.md).
+
+## Appearance
+
+A minimal Material-inspired interface with automatic light and dark themes. Choose **Sites & settings → Appearance** to follow your system or use a fixed light/dark theme. The choice applies to the workspace, toolbar popup and larger on-page editor, and stays available while the vault is locked. It is saved with encrypted local settings. Fonts and icons stay local. Reduced-motion and system high-contrast preferences are respected.
 
 ## Privacy and control
 
@@ -84,7 +88,7 @@ python3 scripts/package.py
 
 On Windows use `python` instead of `python3`. Browser tests use trusted keyboard paste with a browser-populated clipboard, an isolated temporary profile and a test-only localhost host pre-grant. They exercise the shipped JavaScript; they do not automate Chrome's native permission dialog or revocation. Set `CHROMIUM_PATH` to a Chrome for Testing executable if necessary. [Validation notes](docs/validation.md) separate local, CI, and unverified checks.
 
-The package script uses an exact file allowlist, fixed metadata, and uncompressed ZIP entries for reproducible bytes. The extension ZIP contains only the 18 runtime files; source, demo, tests, and policies remain in this repository. Icon generation is reproducible with `python3 scripts/icons.py`.
+The package script uses an exact file allowlist, fixed metadata, and uncompressed ZIP entries for reproducible bytes. The extension ZIP contains only the 19 runtime files; source, demo, tests, and policies remain in this repository. Icon generation is reproducible with `python3 scripts/icons.py`.
 
 The separate store kit uses the committed listing screenshots, so fresh test screenshots cannot change its bytes. Check store image dimensions and transparent icon margins with `python3 scripts/check-assets.py`.
 

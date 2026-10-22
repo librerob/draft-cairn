@@ -10,6 +10,7 @@ async function render() {
   $('site').textContent=origin || 'Choose an ordinary website';
   $('status').textContent=enabled ? 'Protection is on' : 'Protection is off';
   $('detail').textContent=enabled ? 'Only supported fields save. Check the on-page status in the field you are using.' : `Enable before writing. Saves supported answer text locally${state.metadata ? ', with page titles and field details' : ', without titles or field labels'}. Sensitive text can be included. Chrome grants this host across ports; capture uses this exact origin.`;
+  if(!origin)$('detail').textContent='Open a regular website to choose where drafts can save.';
   $('toggle').textContent=enabled ? 'Turn protection off' : 'Enable for this site';$('toggle').disabled=!origin || state.blockedSites.includes(origin);
   $('block-site').disabled=!origin || state.blockedSites.includes(origin);
   if(state.blockedSites.includes(origin)){$('status').textContent='Never capture · blocked';$('detail').textContent='Remove this block in workspace settings before enabling protection.';}

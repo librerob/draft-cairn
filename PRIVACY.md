@@ -1,6 +1,6 @@
 # Privacy policy
 
-Effective 22 October 2026 · Draft Cairn 0.2.0 preview
+Effective 22 October 2026 · Draft Cairn 0.2.1 preview
 
 Draft Cairn keeps supported field text only on websites you explicitly enable. It also keeps complete oversized pastes temporarily, and library answers you deliberately save or import. No account is required. Nothing is sent to the developer.
 
@@ -10,7 +10,7 @@ Recovery records contain answer text, the exact website origin (scheme, host and
 
 Raw URL paths, query strings, fragments, cookies and a general browsing-history log are not stored. Hashes are fingerprints, not guaranteed anonymization: someone who knows candidate pages or fields may guess them. Selected site origins are retained for capture and recovery. Arbitrary narrative answers can contain sensitive information even when credential fields are excluded.
 
-Library records contain title, answer text, optional project, local identifier and save time. They have no website association. Settings include selected and blocked origins, field exclusions, retention, metadata and session-storage choices, and encryption mode. The extension does not use Chrome Sync.
+Library records contain title, answer text, optional project, local identifier and save time. They have no website association. Settings include selected and blocked origins, field exclusions, retention, metadata and session-storage choices, encryption mode, and appearance (system, light or dark). The extension does not use Chrome Sync.
 
 ## Encryption choices
 
