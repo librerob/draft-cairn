@@ -22,7 +22,9 @@ Two other everyday uses:
 
 This is an early preview. Commercial demand and broad compatibility have not been established. Keep a separate copy of important work.
 
-![The answer library with synthetic project answers](docs/images/library.png)
+| Light | Dark |
+| --- | --- |
+| ![Light answer library with synthetic project answers](docs/images/library.png) | ![Dark answer library with synthetic project answers](docs/images/library-dark.png) |
 
 ## Install
 

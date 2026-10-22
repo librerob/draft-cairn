@@ -2,6 +2,14 @@
 
 22 October 2026 · synthetic fixtures only
 
+## 0.2.1 appearance coverage
+
+**15 unit groups and 53 Chromium scenarios passed** on runtime commit `dda8e04d36826eaf145bc65c88ead79a8435458b`. [Passing run](https://github.com/librerob/draft-cairn/actions/runs/39868559743) · [machine-readable results](validation-results-0.2.1.json). Static, manifest, asset, palette contrast and reproducible package checks passed in the same run.
+
+New checks exercise live system light/dark changes, persistent explicit overrides after reload, synchronization with the toolbar popup, dark dialogs, the on-page editor's appearance independently of the website, forced colors, reduced motion, and changes while the vault is locked. The existing 390px layout and full recovery/vault regression coverage remain. The encrypted export/import check covers an immediate import after download, including the dialog-close timing fix.
+
+Both palettes pass 26 active text color pairs at 4.5:1 or greater, and six form-control boundary pairs at 3:1 or greater (`scripts/check-colors.py`). These numeric checks and automated media emulation are not a complete accessibility audit; native screen-reader, zoom and Windows High Contrast inspection remain manual. The actual UI screenshots use synthetic fixtures, local fonts, and disabled screenshot transitions for stable selected-navigation states.
+
 ## 0.2.0 vault/privacy coverage
 
 **15 Node test groups and 48 Chromium scenarios passed** on runtime commit `383687cf7ab5d49e28fd438331032b8dfd9f83f7`. [Passing runtime run](https://github.com/librerob/draft-cairn/actions/runs/39849421888) · [machine-readable scenarios](validation-results-0.2.0.json). Browser: Chromium 151.0.7922.34 on Ubuntu 24.04. Static, manifest, assets and deterministic packaging checks passed in the same run.

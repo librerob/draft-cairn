@@ -10,7 +10,8 @@ for name,expected in {
     'extension/icons/16.png':(16,16),'extension/icons/32.png':(32,32),
     'extension/icons/48.png':(48,48),'extension/icons/128.png':(128,128),
     'docs/store/icon-512.png':(512,512),'docs/store/small-promo.png':(440,280),
-    'docs/images/recovery.png':(1280,800),'docs/images/library.png':(1280,800)
+    'docs/images/recovery.png':(1280,800),'docs/images/library.png':(1280,800),
+    'docs/images/recovery-dark.png':(1280,800),'docs/images/library-dark.png':(1280,800)
 }.items():
     assert dimensions(root/name)==expected, f'Incorrect dimensions: {name}'
 b=(root/'extension/icons/128.png').read_bytes()

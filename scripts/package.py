@@ -26,6 +26,8 @@ kit_files={
     'listing/promo-440x280.png':(root/'docs/store/small-promo.png').read_bytes(),
     'listing/screenshot-recovery-1280x800.png':(root/'docs/images/recovery.png').read_bytes(),
     'listing/screenshot-library-1280x800.png':(root/'docs/images/library.png').read_bytes(),
+    'listing/screenshot-recovery-dark-1280x800.png':(root/'docs/images/recovery-dark.png').read_bytes(),
+    'listing/screenshot-library-dark-1280x800.png':(root/'docs/images/library-dark.png').read_bytes(),
     'listing/reviewer-instructions.txt':(root/'docs/store/reviewer-instructions.txt').read_bytes(),
     'listing/privacy-policy.md':(root/'PRIVACY.md').read_bytes(),
     'SUBMISSION.md':(root/'docs/chrome-web-store.md').read_bytes(),

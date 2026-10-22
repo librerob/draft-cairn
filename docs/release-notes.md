@@ -1,21 +1,16 @@
-Draft Cairn 0.2.0 preview — optional passphrase vault and privacy controls.
+Draft Cairn 0.2.1 preview — a simpler interface with light and dark themes.
 
-Automatic encryption remains the password-free default. Users can opt into a passphrase vault: new drafts continue saving while locked, and reading, search, restoration and library changes require unlocking. A forgotten passphrase cannot be reset. Changing the passphrase or returning to automatic encryption preserves existing answers through atomic rekeying.
+The workspace, toolbar popup and larger on-page editor now share a minimal Material-inspired design: clean sans-serif typography, rounded controls, quieter surfaces, and a restrained green accent.
 
-- The vault uses per-record AES-256-GCM with RSA-OAEP-3072 key wrapping. PBKDF2-SHA-256 protects the private key. Unlock survives worker suspension and clears on explicit lock or browser/extension session end.
-- The operational index uses a separate automatic key in the profile. The vault protects answer contents in copied files; it does not hide operational metadata from a profile holder or protect an actively compromised browser/device. See PRIVACY.md.
-- Fresh installations default to one-day recovery without page titles/field details. Existing choices are preserved. Minimal-metadata drafts are copy-only; enabling page details permits conservative direct restoration.
-- Optional session-only recovery keeps encrypted drafts in browser-session memory, with a smaller 2 MiB recovery budget. The persistent library remains. Chrome must fully exit to end its session; closing the last window can leave background Chrome running.
-- Block sites from the popup or exclude fields in the larger on-page editor. Manage exclusions in settings. Field exclusion deletes its recovery revisions; blocking a site keeps earlier drafts unless deleted.
-- Export a passphrase-encrypted library backup or explicitly choose readable JSON. Backup passwords are separate from the vault. Clipboard managers/history and exported copies remain outside lock and wipe controls.
-- Delete all is also available in the popup, including while locked. Persistent record/index/key updates are atomic. Migration supports old plaintext and v0.1.2 encrypted stores without duplicating a full dataset inside Chrome storage.local's quota.
+- Appearance follows the system by default. Choose System, Light or Dark in Sites & settings. The preference is stored with encrypted local settings, applies across extension pages and supported-site editors, and remains available while the vault is locked.
+- Dark mode covers fields, dialogs, status messages, menus and answer cards. The layout adapts to smaller windows. Reduced-motion and forced-color preferences are supported.
+- Fonts and icons stay local. There are no new permissions, runtime dependencies, remote fonts or outbound connections.
+- Encrypted library export now closes the passphrase form before starting the download, so immediately importing the file cannot be disrupted by the earlier dialog's close event.
 
-Validation: 15 unit groups, 48 real Chromium integration scenarios, static/manifest/assets checks and reproducible packaging passed. Tests cover locked capture, real worker/browser restart, UI scrubbing, wrong passwords, exports, exclusions, legacy upgrades and failed near-capacity migration rollback. See docs/validation.md and validation-results-0.2.0.json for evidence and limits. There has been no independent cryptographic/security audit.
+Automatic answer encryption, the optional passphrase vault, locked capture, session-only drafts, site/field exclusions and library backups remain available. Forgotten vault or backup passphrases cannot be recovered. Clipboard history, readable exports, websites and a compromised live device remain outside vault protection.
 
-Native Chrome permission approval/denial/revocation, daily-use OS clipboard behavior and two or three intended portals still need supervised synthetic-data checks before store submission. Automated integration pre-grants localhost in a temporary test copy. The shipping manifest keeps all hosts optional.
+Validation includes 15 unit groups, 53 real Chromium integration scenarios, text/control contrast checks for both palettes, static/manifest/asset checks and reproducible packaging. See docs/validation.md and validation-results-0.2.1.json for the exact tested commit and scenario count. There has been no independent security audit.
 
-Extract the extension ZIP, verify SHA256SUMS, and load its manifest folder using chrome://extensions → Developer mode → Load unpacked. The separate store kit contains the install ZIP, icon, images, listing copy and reviewer steps. Upload only the inner extension ZIP as the package.
+Native Chrome permission approval/denial/revocation, daily-use OS clipboard behavior and intended application portals still require supervised synthetic-data checks before Web Store submission. No store submission, payment or paid service has been activated.
 
-Limits: standard top-level textareas and long ordinary text inputs; no rich text, frames or incognito. Unsupported fields visibly warn. Latest unsaved keystrokes may be lost. Direct restoration is empty-field-only, unique-match-only, and unavailable for query/fragment pages or drafts without field details. Keep a separate copy of important work.
-
-This release has not been submitted to the Chrome Web Store. No paid service, registration or fee has been activated.
+Extract the extension ZIP, verify SHA256SUMS, and load its manifest folder using Chrome Developer mode / Load unpacked. For store preparation, extract the separate kit and upload only its inner extension ZIP as the package.
