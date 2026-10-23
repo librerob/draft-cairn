@@ -5,7 +5,7 @@ Status: **not yet performed on the unmodified 0.3.0 ZIP**. Automated Chromium te
 1. Extract `draft-cairn-0.3.0.zip` and load that extracted folder in a fresh supported Chrome profile via `chrome://extensions` → Developer mode → Load unpacked. Pin the extension. Do not change its manifest or permissions.
 2. Run `node scripts/demo.mjs` from a source checkout and open `http://127.0.0.1:8765/index.html` in that Chrome profile. Before enabling protection, type a synthetic answer. Confirm no draft is captured.
 3. Open the popup and choose Enable for this site. Deny Chrome's native access request. Confirm protection stays off. Repeat and approve. If Chrome closes the popup, reopen it and confirm protection has finished enabling. Type a new synthetic answer in Project summary and wait for “saved on this device”.
-4. Reload the demo, open Recovery & library, and restore the saved answer into the now-empty Project summary field. Check it is exact. Put new text in the destination and confirm restoration refuses to overwrite it.
+4. With default metadata minimization, reload and verify the answer is available to copy. For direct restoration, first enable page titles/field details in settings, create a fresh saved revision, then reload and restore it into the now-empty Project summary. Check it is exact. Put new text in the destination and confirm restoration refuses to overwrite it.
 5. Use the demo's Copy synthetic long answer button and **the OS paste shortcut** in Project summary. Test once with existing text and once with some text selected. An oversized paste must leave the field unchanged and show the complete original in the larger editor. Use Tab, Shift+Tab, and Escape to inspect focus and close behavior. Copy from the editor and paste into a disposable local text editor to verify exact content.
 6. Save a synthetic library answer, export it, delete it, and import the exported file. Verify search, project, and copying. Delete the exported test file yourself afterward if desired.
 7. Close and fully restart Chrome. Confirm retained drafts and the explicit library answer remain. Use the session-expiry button and recover after returning to the empty form.
@@ -14,6 +14,12 @@ Status: **not yet performed on the unmodified 0.3.0 ZIP**. Automated Chromium te
 10. Delete site data, then all extension data. Confirm the relevant records and site access are gone. Use synthetic data on two or three intended application portals too, with permission to do so; record the exact portal and supported/unsupported fields privately without saving actual client text.
 
 Record Chrome/OS version, date, pass/fail, and any issue using synthetic descriptions. The local Windows environment blocked the downloaded Chrome for Testing binary by application-control policy; that policy was not bypassed. Native Chrome permission and OS clipboard checks remain a submission gate until the owner or an available compatible environment completes them.
+
+## Paste and targeted rich text
+
+On an enabled eligible field, paste a harmless synthetic paragraph and wait for the visible-paste check and completed save. Reload and verify the pasted answer, rather than just an earlier typing revision, is available in recovery. A matching visible value does not prove server submission. Compare the dated [public sample matrix](../portal-matrix.md) with the actual page configuration; a landing-page iframe is not a standalone form.
+
+On a targeted top-level rich editor, type and paste synthetic text, then verify plain-text recovery after reload. Recovery is copy back only. Check partial rich selections produce manual-review wording, excluded/read-only fields are not captured, and generic contenteditable/iframe editors say not protected. No formatting or attachment recovery is promised.
 
 ## Optional vault and privacy controls
 

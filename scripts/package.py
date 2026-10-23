@@ -31,9 +31,10 @@ kit_files={
     'listing/reviewer-instructions.txt':(root/'docs/store/reviewer-instructions.txt').read_bytes(),
     'listing/privacy-policy.md':(root/'PRIVACY.md').read_bytes(),
     'SUBMISSION.md':(root/'docs/chrome-web-store.md').read_bytes(),
-    'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_bytes(),
-    'COMPATIBILITY.md':(root/'docs/compatibility.md').read_bytes(),
-    'PUBLIC-SAMPLE-MATRIX.md':(root/'docs/portal-matrix.md').read_bytes(),
+    'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_text(encoding='utf-8').replace('(../portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
+    'COMPATIBILITY.md':(root/'docs/compatibility.md').read_text(encoding='utf-8').replace('(portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
+    'PUBLIC-SAMPLE-MATRIX.md':(root/'docs/portal-matrix.md').read_text(encoding='utf-8').replace('(store/manual-smoke-test.md)','(FINAL-MANUAL-CHECKS.md)').replace('(compatibility.md)','(COMPATIBILITY.md)').encode('utf-8'),
+    f'portal-results-{version}.json':(root/f'docs/portal-results-{version}.json').read_bytes(),
     'START-HERE.txt':(
         f'Draft Cairn {version} Chrome Web Store preparation kit\n\n'
         f'Extract this kit. Upload ONLY extension/{archive.name} as the extension package.\n'
@@ -50,4 +51,4 @@ for deliverable in [archive,kit]:
     checksum=hashlib.sha256(deliverable.read_bytes()).hexdigest()
     checks.append(f'{checksum}  {deliverable.name}\n')
     print(f'{deliverable.name}: {checksum}')
-(out/'SHA256SUMS').write_text(''.join(checks),encoding='ascii')
+(out/'SHA256SUMS').write_text(''.join(checks),encoding='ascii',newline='\n')

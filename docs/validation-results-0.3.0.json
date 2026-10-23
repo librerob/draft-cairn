@@ -4,7 +4,7 @@
     "no capture before explicit site enable",
     "forged input and paste cannot create drafts; no branded host attribute",
     "typing saves through the real service worker",
-    "unsupported and rich-text focus visibly says not protected",
+    "unsupported fields and generic contenteditable visibly say not protected",
     "inherited autocomplete off permits ordinary narrative capture",
     "reload and explicit restoration to the original empty field",
     "nonempty destination is never overwritten",
@@ -68,7 +68,7 @@
   "permissionPrompt": "not automated; temporary loopback host pre-grant; native removal simulated",
   "clipboard": "browser clipboard populated by API, trusted keyboard paste; daily-use OS clipboard still manual",
   "syntheticOnly": true,
-  "testedCommit": "11c4e56aeae039ce17e346bc5f8cb27a896f308d",
-  "run": "https://github.com/librerob/draft-cairn/actions/runs/39994965157",
+  "testedCommit": "5d2b786caf01a024aa9e59960419982a37b9bfd3",
+  "run": "https://github.com/librerob/draft-cairn/actions/runs/39995486948",
   "unitGroups": 17
 }

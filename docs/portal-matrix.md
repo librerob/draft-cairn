@@ -2,7 +2,7 @@
 
 Tested 23 October 2026 using Chromium 151.0.7922.34 on Linux, the real installed extension and synthetic narrative text. **Three application samples passed capture, visible-paste comparison and saved-text recovery after reload.** This is sample-level evidence, not certification of an entire platform or a completed application workflow.
 
-[Recorded results](portal-results-0.3.0.json) · [Public-site run](https://github.com/librerob/draft-cairn/actions/runs/39994965174) · tested runtime commit `11c4e56aeae039ce17e346bc5f8cb27a896f308d`. The harness pre-grants named test hosts in a temporary manifest; native permission prompts remain a separate manual check. A successful collection workflow does not mean every row passed.
+[Recorded results](portal-results-0.3.0.json) · [Public-site run](https://github.com/librerob/draft-cairn/actions/runs/39995486919) · tested runtime commit `5d2b786caf01a024aa9e59960419982a37b9bfd3`. The harness pre-grants named test hosts in a temporary manifest; native permission prompts remain a separate manual check. A successful collection workflow does not mean every row passed.
 
 | Platform and exact sample | Typing capture | Visible paste / recovery after reload | Direct restore | Scope and limitation |
 | --- | --- | --- | --- | --- |

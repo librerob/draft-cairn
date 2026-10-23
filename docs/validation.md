@@ -4,7 +4,7 @@
 
 ## 0.3.0 paste and rich-text coverage
 
-**17 unit groups and 63 Chromium scenarios passed** on runtime commit `11c4e56aeae039ce17e346bc5f8cb27a896f308d`. [Passing run](https://github.com/librerob/draft-cairn/actions/runs/39994965157) · [machine-readable results](validation-results-0.3.0.json). Static checks, asset dimensions, 26 text contrast pairs, six control-boundary pairs and reproducible packaging passed in that run.
+**17 unit groups and 63 Chromium scenarios passed** on runtime commit `5d2b786caf01a024aa9e59960419982a37b9bfd3`. [Passing run](https://github.com/librerob/draft-cairn/actions/runs/39995486948) · [machine-readable results](validation-results-0.3.0.json). Static checks, asset dimensions, 26 text contrast pairs, six control-boundary pairs and reproducible packaging passed in that run.
 
 The new unit checks cover selection replacement, UTF-16, line-ending normalization, significant whitespace, ambiguous comparisons and the rich-adapter allowlist with sensitive-field exclusions. Chromium scenarios cover delayed clipping, cancellation, interrupted checks, removed fields, rich adapter capture, consumed native input, whole/partial rich selections and private regions, alongside the full storage/vault/UI regression suite.
 
