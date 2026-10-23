@@ -11,7 +11,7 @@
   const fieldStatus = new WeakMap();
   const pasteIssues = new Map(); // At most four originals in page memory; never a clipboard history.
   let pasteWatch;
-  let ignoredFields=new Set(), excluded=new WeakSet(), checkedFields=new WeakSet(), focusVersion=0, appearance='system';
+  let ignoredFields=new Set(), excluded=new WeakSet(), checkedFields=new WeakMap(), focusVersion=0, appearance='system';
   const richSelector='.ql-editor[contenteditable="true"],.ProseMirror[contenteditable="true"],.ck-editor__editable[contenteditable="true"][role="textbox"],.mce-content-body[contenteditable="true"]';
   function editorType(el) {
     if(el.tagName!=='DIV' || !el.matches(richSelector))return '';
@@ -28,13 +28,14 @@
   }
   const textOf = el => editorType(el) ? el.innerText : el.value;
   async function excludedField(el) {
+    const identity=C.fieldIdentity(describe(el));
     const pageKey=await digest(location.origin+location.pathname);
-    const id=await digest(location.origin+pageKey+C.fieldIdentity(describe(el)));
-    checkedFields.add(el);
+    const id=await digest(location.origin+pageKey+identity);
+    checkedFields.set(el,identity);
     if(ignoredFields.has(id)){excluded.add(el);return true;}
     return false;
   }
-  function configure(data){ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();checkedFields=new WeakSet();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;}
+  function configure(data){ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();checkedFields=new WeakMap();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;}
   const shorten = s => (s || '').trim().replace(/\s+/g,' ').slice(0,200);
   const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))), b=>b.toString(16).padStart(2,'0')).join('');
   function describe(el) {
@@ -200,8 +201,15 @@
       preservePaste(watch,reason || (!valid ? 'The field disappeared or became unavailable.' : !compared.verified ? 'This selection or field size could not be compared reliably.' : 'The visible result differs from the expected paste. The website may have removed or changed text.'),actual,
         compared.verified && !reason && valid ? `Expected ${compared.expectedLength} UTF-16 units; visible ${compared.actualLength}. First difference at unit ${compared.first+1}. Line endings are normalized; formatting is not compared.` : 'Check interrupted or unsupported selection; no claim of missing text is made.');
     } else {
-      const saved=fieldStatus.get(watch.el);
-      fieldStatus.set(watch.el,{text:'visible paste matches · '+(saved?.error ? saved.text : saved?.text?.includes('saved on this device') ? 'saved on this device' : 'save not confirmed')+' · submission not checked',error:!!saved?.error});focusedStatus();
+      // A trusted paste can be entirely model-managed, with no native input event.
+      // Save the checked visible result too; an earlier typing save is not evidence
+      // that this paste has reached storage.
+      fieldStatus.set(watch.el,{text:'visible paste matches · saving…'});focusedStatus();
+      enqueue(watch.el,actual).then(saved=>{
+        if(!active || watch.version!==activation || !watch.el.isConnected || textOf(watch.el)!==actual || pasteWatch || pasteIssues.has(watch.el))return;
+        const previous=fieldStatus.get(watch.el);
+        fieldStatus.set(watch.el,{text:'visible paste matches · '+(saved ? 'saved on this device' : 'not saved · keep a separate copy')+(previous?.text?.includes('oldest recovery') ? ' · oldest recovery revisions removed' : '')+' · submission not checked',error:!saved});focusedStatus();
+      });
     }
   }
   document.addEventListener('focusin',e=>{
@@ -239,7 +247,7 @@
     if (!e.isTrusted) return;
     const el=fieldFrom(e.target);
     if (!active || !el || !C.allowedField(describe(el)) || !e.clipboardData || !e.clipboardData.types.includes('text/plain')) return;
-    if(ignoredFields.size && !checkedFields.has(el)){announce('paste check unavailable until field exclusion check finishes',true);return;}
+    if(ignoredFields.size && checkedFields.get(el)!==C.fieldIdentity(describe(el))){announce('paste check unavailable until field exclusion check finishes',true);return;}
     const text=e.clipboardData.getData('text/plain');
     if(!text || text.length>C.MAX_TEXT){announce('paste too large to preserve · keep a separate copy',true);return;}
     finishPaste('Another paste started before verification finished. Compare the earlier original manually.');

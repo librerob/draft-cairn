@@ -16,7 +16,7 @@ const targets=[
   {name:'Cognito Forms grant template',url:'https://www.cognitoforms.com/templates/grant-application-template',standalone:/^https:\/\/www\.cognitoforms\.com\/f\//},
   {name:'Wufoo builder demo',url:'https://www.wufoo.com/form-builder/'},
   {name:'Greenhouse application',url:'https://job-boards.greenhouse.io/anthropic/jobs/5065894008'},
-  {name:'Ashby application',url:'https://jobs.ashbyhq.com/Ashby/0f5dbf59-687b-4d88-88a7-73ee0a66b48d/?action=apply'},
+  {name:'Ashby application',url:'https://jobs.ashbyhq.com/Ashby/0f5dbf59-687b-4d88-88a7-73ee0a66b48d/?action=apply',application:true},
   {name:'Quill official demo',url:'https://quilljs.com/',editor:true},
   {name:'ProseMirror official demo',url:'https://prosemirror.net/examples/basic/',editor:true},
   {name:'CKEditor 5 official demo',url:'https://ckeditor.com/ckeditor-5/demo/feature-rich/',editor:true}
@@ -52,6 +52,10 @@ async function inspect(page,target,scope) {
         const hint=await candidate.evaluate(el=>[el.id,el.getAttribute('name'),el.getAttribute('aria-label'),el.labels?.[0]?.textContent].filter(Boolean).join(' '));
         if(!/password|email|phone|address|payment|bank|account|card|social.security|contact/i.test(hint)){field=candidate;break;}
       }
+    }
+    if(!field && attempt===4 && scope.includes('standalone') && target.name==='Jotform grant template') {
+      const next=page.getByRole('button',{name:'Next',exact:true});
+      if(await next.count()===1 && await next.isVisible())await next.click();
     }
     if(!field)await sleep(500);
   }
@@ -91,13 +95,16 @@ async function inspect(page,target,scope) {
   await page.evaluate(text=>navigator.clipboard.writeText(text),pasted);await field.press('Control+V');await sleep(1900);
   const names=(await session.send('Accessibility.getFullAXTree')).nodes.map(n=>n.name?.value || '');
   result.paste=names.some(n=>n.includes('visible paste matches')) ? 'visible match' : names.some(n=>n.includes('paste needs review')) ? 'review original' : 'not verified';
+  let recoveryDraft;
+  for(let n=0;n<40;n++){recoveryDraft=(await api('STATE')).drafts.find(d=>d.origin===origin && d.text.includes(pasted));if(recoveryDraft)break;await sleep(100);}
+  result.pastedAnswerSaved=!!recoveryDraft;
   await page.screenshot({path:path.join(output,`${results.length+1}-${target.name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()}.png`)});
   await page.reload({waitUntil:'domcontentloaded',timeout:30000});
-  result.recoveryAfterReload=(await api('STATE')).drafts.some(d=>d.id===draft.id && d.text.includes(marker));
+  result.recoveryAfterReload=!!recoveryDraft && (await api('STATE')).drafts.some(d=>d.id===recoveryDraft.id && d.text.includes(pasted));
   result.status=result.recoveryAfterReload ? 'capture and reload recovery passed' : 'recovery failed';
   // Direct restoration is a separate capability; never overwrite a vendor's demo text.
-  if(draft.restorable && !target.editor) {
-    try{await api('RESTORE',{id:draft.id,tabId});result.restore='passed';}
+  if(recoveryDraft?.restorable && !target.editor) {
+    try{await api('RESTORE',{id:recoveryDraft.id,tabId});result.restore='passed';}
     catch{result.restore='refused; copy back available';}
   } else result.restore='copy back only';
   return result;
@@ -108,6 +115,11 @@ try {
     try {
       await page.goto(target.url,{waitUntil:'domcontentloaded',timeout:30000});
       await sleep(2000);
+      if(target.application) {
+        for(const control of [page.getByRole('tab',{name:'Application',exact:true}),page.getByRole('button',{name:'Application',exact:true}),page.getByRole('link',{name:'Application',exact:true})]) {
+          if(await control.count()===1 && await control.isVisible()){await control.click();await sleep(1500);break;}
+        }
+      }
       const entry=await inspect(page,target,'public top-level sample');results.push(entry);
       if(target.standalone && !entry.capture) {
         const linked=page.frames().map(f=>f.url()).find(url=>target.standalone.test(url));

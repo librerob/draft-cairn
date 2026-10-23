@@ -1,8 +1,8 @@
 # Final Chrome smoke test
 
-Status: **not yet performed on the unmodified 0.2.0 ZIP**. Automated Chromium tests use a test-only localhost host grant; they cannot stand in for these checks. Use only synthetic text. Stop submission if a required step fails.
+Status: **not yet performed on the unmodified 0.3.0 ZIP**. Automated Chromium tests use a test-only localhost host grant; they cannot stand in for these checks. Use only synthetic text. Stop submission if a required step fails.
 
-1. Extract `draft-cairn-0.2.1.zip` and load that extracted folder in a fresh supported Chrome profile via `chrome://extensions` → Developer mode → Load unpacked. Pin the extension. Do not change its manifest or permissions.
+1. Extract `draft-cairn-0.3.0.zip` and load that extracted folder in a fresh supported Chrome profile via `chrome://extensions` → Developer mode → Load unpacked. Pin the extension. Do not change its manifest or permissions.
 2. Run `node scripts/demo.mjs` from a source checkout and open `http://127.0.0.1:8765/index.html` in that Chrome profile. Before enabling protection, type a synthetic answer. Confirm no draft is captured.
 3. Open the popup and choose Enable for this site. Deny Chrome's native access request. Confirm protection stays off. Repeat and approve. If Chrome closes the popup, reopen it and confirm protection has finished enabling. Type a new synthetic answer in Project summary and wait for “saved on this device”.
 4. Reload the demo, open Recovery & library, and restore the saved answer into the now-empty Project summary field. Check it is exact. Put new text in the destination and confirm restoration refuses to overwrite it.

@@ -1,6 +1,6 @@
 # Privacy policy
 
-Effective 23 October 2026 · Draft Cairn 0.2.1 preview
+Effective 23 October 2026 · Draft Cairn 0.3.0 preview
 
 Draft Cairn keeps supported field text only on websites you explicitly enable. It also keeps complete oversized, changed or unverified paste originals temporarily, and library answers you deliberately save or import. No account is required. Nothing is sent to the developer.
 

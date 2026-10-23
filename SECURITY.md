@@ -1,6 +1,6 @@
 # Security policy
 
-The latest 0.2.x preview is the supported line. It has not received an independent security audit. Never submit real answers, profile files, tokens or sensitive URLs to public issues.
+The latest 0.3.x preview is the supported line. It has not received an independent security audit. Never submit real answers, profile files, tokens or sensitive URLs to public issues.
 
 For vulnerabilities use GitHub private vulnerability reporting if available in the Security tab. Otherwise open a minimal public issue requesting a private reporting route without exploit details or data. Do not send confidential material before a private channel is agreed.
 
@@ -21,4 +21,4 @@ For vulnerabilities use GitHub private vulnerability reporting if available in t
 
 ## Release review
 
-Run unit, static, real-browser and reproducible-package checks. Cover failed migrations/rekeys, wrong passwords, locked capture, worker/browser restart, session expiry, UI scrubbing, backup tampering, exclusions, permissions and deletion. Use synthetic fixtures only; never upload real captured text, browser profiles, logs, traces or screenshots. See [validation](docs/validation.md) for measured checks and manual gaps.
+Run unit, static, real-browser and reproducible-package checks. Cover failed migrations/rekeys, wrong passwords, locked capture, worker/browser restart, session expiry, UI scrubbing, backup tampering, exclusions, permissions and deletion. Use synthetic fixtures and public samples only; never upload real captured text, browser profiles, logs, traces or screenshots. See [validation](docs/validation.md) for measured checks and manual gaps.

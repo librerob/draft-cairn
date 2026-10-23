@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Draft Cairn",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Local answer recovery, paste-limit warnings, and a reusable answer library for sites you choose.",
   "minimum_chrome_version": "120",
   "incognito": "not_allowed",

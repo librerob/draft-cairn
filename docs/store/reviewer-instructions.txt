@@ -1,4 +1,4 @@
-Draft Cairn 0.2.1 preview — synthetic reviewer test instructions
+Draft Cairn 0.3.0 preview — synthetic reviewer test instructions
 
 No account, payment, reviewer credentials, remote service, or client data is needed.
 
@@ -7,13 +7,13 @@ Source and local demo: https://github.com/librerob/draft-cairn
 2. Open http://127.0.0.1:8765/index.html in Chrome. The extension is inactive until the reviewer enables protection for that site from its toolbar popup and approves the optional host permission.
 3. Type a synthetic answer in Project summary. Wait for the on-page “saved on this device” status. Reload, then open Recovery & library. Preview/copy the saved answer. To test direct restoration, first enable page titles/field details in settings, type a new answer, wait for saving, then reload and restore it into the original empty field.
 4. Existing text is never overwritten. The two Additional detail fields have duplicate identities and support copying rather than direct restoration. Query/fragment pages are copy-only.
-5. Use Copy synthetic long answer in the demo, then paste into Project summary (maxlength 500). An oversized paste is stopped; a labelled larger editor shows the complete original and character counter. The original is saved temporarily for up to one hour if the storage write succeeds. Custom website limits are not detected.
+5. Use Copy synthetic long answer in the demo, then paste into Project summary (maxlength 500). An oversized paste is stopped; a labelled larger editor shows the complete original and character counter. The original is saved temporarily for up to one hour if the storage write succeeds. Post-paste checks compare visible text after 1.5 seconds; later changes and server acceptance are not verified.
 6. In Answer library, save a synthetic answer with a title and optional project. Search, copy, export/import v1 JSON, and delete it. Choose an encrypted backup, or readable JSON with an explicit plain-text warning.
-7. Focus a password field or a rich-text/contenteditable field: the on-page status must say not protected in this field. Ordinary autocomplete=off narrative fields are supported; synthetic script-dispatched input/paste events do not save.
+7. Focus a password field or an unsupported generic contenteditable field: the on-page status must say not protected in this field. Ordinary autocomplete=off narrative fields are supported; synthetic script-dispatched input/paste events do not save.
 8. Recovery uses oldest-first eviction at 180 records or the byte budget, with a visible notice; library answers are never automatically removed.
 9. Sites & settings controls retention (one day by default on fresh installs; existing choices are preserved), disabling protection, deleting site data, and deleting all extension data.
 
-Only standard top-level textareas and long ordinary text inputs are supported. Password/payment/OTP/hidden and sensitive-hint fields, rich text editors, frames, and incognito are excluded. Filtering cannot identify every sensitive answer. Text that has not finished saving can be lost. Persisted records/settings use AES-256-GCM with an automatic non-extractable key in this browser profile. An optional passphrase vault is available; the default automatic mode uses a same-profile key. A compromised live browser/device can still expose answers. No analytics, external answer transmission, remotely hosted code, or paid features are present.
+Supported fields are standard top-level textareas, long ordinary text inputs, and targeted top-level Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots. Rich-text recovery is plain text and copy back only. Password/payment/OTP/hidden and sensitive-hint fields, generic contenteditable, frames, shadow roots and incognito are excluded. See docs/portal-matrix.md for the exact tested samples. Filtering cannot identify every sensitive answer. Text that has not finished saving can be lost. Persisted records/settings use AES-256-GCM with an automatic non-extractable key in this browser profile. An optional passphrase vault is available; the default automatic mode uses a same-profile key. A compromised live browser/device can still expose answers. No analytics, external answer transmission, remotely hosted code, or paid features are present.
 
 0.2 vault/privacy checks (synthetic data only):
 - Fresh installs use one-day recovery and omit page titles/field details. Enable page details in Sites & settings before testing direct restoration; otherwise copy-only is expected.
