@@ -97,7 +97,7 @@ try {
   await poll(()=>names(page),items=>items.some(n=>n.includes('not protected in this field')));
   await page.evaluate(()=>{const el=document.createElement('div');el.id='rich';el.contentEditable='true';el.setAttribute('role','textbox');el.textContent='Synthetic rich editor';document.body.append(el);el.focus();});
   await poll(()=>names(page),items=>items.some(n=>n.includes('not protected in this field')));
-  check('unsupported and rich-text focus visibly says not protected');
+  check('unsupported fields and generic contenteditable visibly say not protected');
   await page.evaluate(()=>{document.getElementById('application').autocomplete='off';});
   await page.locator('#impact').fill('Synthetic autocomplete-off answer');
   await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic autocomplete-off answer'));
@@ -157,7 +157,9 @@ try {
   assert(reviewTree.nodes.some(n=>n.value?.value===trimmed));assert(reviewTree.nodes.some(n=>n.value?.value===trimmed.slice(0,12)));
   await mkdir(path.join(root,'test-results/screenshots'),{recursive:true});
   await page.screenshot({animations:'disabled',path:path.join(root,'test-results/screenshots/paste-review.png')});
-  await page.keyboard.press('Escape');check('delayed custom truncation preserves the complete original and exposes visible-text review');
+  await clickAccessible(page,name=>name==='Dismiss this warning');
+  await poll(()=>names(page),items=>!items.some(n=>n==='Review your paste'));
+  check('delayed custom truncation preserves the complete original and exposes visible-text review');
   await paste(page,'#custom-paste','Synthetic interrupted paste');await page.keyboard.type(' more');
   await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text==='Synthetic interrupted paste'));
   await clickAccessible(page,name=>name.startsWith('Draft Cairn ·'));

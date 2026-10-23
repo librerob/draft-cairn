@@ -1,6 +1,6 @@
 {
-  "date": "2026-10-23T17:22:40.968Z",
-  "commit": "f9707b432abc1367129b003b80caf688825f8a53",
+  "date": "2026-10-23T17:27:28.473Z",
+  "commit": "11c4e56aeae039ce17e346bc5f8cb27a896f308d",
   "browser": "151.0.7922.34",
   "syntheticOnly": true,
   "submissionPerformed": false,
@@ -124,19 +124,19 @@
           "textareas": 5
         },
         {
-          "url": "https://www.wufoo.com/form-builder/signup/",
-          "topLevel": false,
-          "textareas": 1
-        },
-        {
-          "url": "https://www.wufoo.com/form-builder/signup/",
-          "topLevel": false,
-          "textareas": 1
-        },
-        {
           "url": "non-web frame",
           "topLevel": false,
           "textareas": 0
+        },
+        {
+          "url": "https://www.wufoo.com/form-builder/signup/",
+          "topLevel": false,
+          "textareas": 1
+        },
+        {
+          "url": "https://www.wufoo.com/form-builder/signup/",
+          "topLevel": false,
+          "textareas": 1
         },
         {
           "url": "https://www.recaptcha.net/recaptcha/enterprise/anchor",

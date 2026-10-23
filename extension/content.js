@@ -172,9 +172,11 @@
     };
     actions.append(copy,close,ignore); dialog.append(heading,note,label,area,counter,help,actions,result);
     if(issue) {
+      area.style.height='120px';area.style.minHeight='120px';
+      help.textContent='Edits here stay in memory until copied. Review the website before pasting. Formatting is not compared.';
       const comparison=document.createElement('p');comparison.textContent=issue.comparison || 'The visible result could not be verified.';
       const actualLabel=document.createElement('label');actualLabel.htmlFor='cairn-visible';actualLabel.textContent='Visible field text when checked';
-      const actual=document.createElement('textarea');actual.id='cairn-visible';actual.readOnly=true;actual.value=issue.actual;actual.style.height='140px';
+      const actual=document.createElement('textarea');actual.id='cairn-visible';actual.readOnly=true;actual.value=issue.actual;actual.style.height='80px';actual.style.minHeight='80px';
       const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='Dismiss this warning';dismiss.onclick=()=>{pasteIssues.delete(el);dialog.close();focusedStatus();};
       actions.append(dismiss);dialog.insertBefore(comparison,label);dialog.insertBefore(actualLabel,counter);dialog.insertBefore(actual,counter);
     }
