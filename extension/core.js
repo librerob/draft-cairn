@@ -26,7 +26,7 @@
   const sensitiveAutocomplete = /^(?:cc-.+|.*password|one-time-code|webauthn|username|name|given-name|additional-name|family-name|honorific-prefix|honorific-suffix|nickname|email|tel(?:-.+)?|street-address|address-.+|postal-code|country(?:-name)?|bday(?:-.+)?|sex|photo|url|impp|transaction-.+)$/;
   function allowedField(f) {
     if (!f.visible || f.disabled || f.readOnly || f.private) return false;
-    if (!['TEXTAREA', 'INPUT'].includes(f.tag)) return false;
+    if (!['TEXTAREA', 'INPUT'].includes(f.tag) && !(f.tag === 'DIV' && ['quill','prosemirror','ckeditor5','tinymce-inline'].includes(f.type))) return false;
     if (f.tag === 'INPUT' && (f.type !== 'text' || f.maxLength < 120)) return false;
     const autocomplete = (f.autocomplete || '').toLowerCase().split(/\s+/);
     if (autocomplete.some(t => sensitiveAutocomplete.test(t))) return false;
@@ -41,6 +41,19 @@
     const selected = Math.max(0, end - start);
     const available = Math.max(0, limit - (value.length - selected));
     return {available, total: value.length - selected + pasted.length, oversized: pasted.length > available};
+  }
+  const normalizePaste = text => text.replace(/\r\n?/g,'\n');
+  function expectedPaste(value,start,end,pasted) {
+    if (![value,pasted].every(s=>typeof s==='string') || !Number.isInteger(start) || !Number.isInteger(end) || start<0 || end<start || end>value.length) return null;
+    const expected=normalizePaste(value.slice(0,start)+pasted+value.slice(end));
+    return expected.length<=MAX_TEXT ? expected : null;
+  }
+  function comparePaste(expected,actual) {
+    if(expected===null || typeof actual!=='string' || actual.length>MAX_TEXT)return {verified:false,changed:false};
+    actual=normalizePaste(actual);
+    let first=0;
+    while(first<expected.length && first<actual.length && expected[first]===actual[first])first++;
+    return {verified:true,changed:actual!==expected,first,expectedLength:expected.length,actualLength:actual.length};
   }
   function prune(state, now = Date.now()) {
     state.drafts = state.drafts.filter(d => d.expires > now);
@@ -146,5 +159,5 @@
     return hits.length === 1 && (saved.field.id || saved.field.name) ? hits[0] : null;
   }
   globalThis.Cairn = Object.freeze({MAX_TEXT, MAX_BYTES, MAX_DRAFTS, MAX_LIBRARY, DAY, originOf, hostPattern,
-    allowedField, pasteCapacity, prune, fresh, privacyDefaults, minimalDraft, planDraft, bounded, libraryBounded, stateBytes, addDraft, libraryItem, parseImport, fieldIdentity, matchField});
+    allowedField, pasteCapacity, normalizePaste, expectedPaste, comparePaste, prune, fresh, privacyDefaults, minimalDraft, planDraft, bounded, libraryBounded, stateBytes, addDraft, libraryItem, parseImport, fieldIdentity, matchField});
 })();

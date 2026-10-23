@@ -136,6 +136,50 @@ try {
   // CDP inspects the accessibility tree, like a screen reader, to verify the dialog and counter.
   await paste(page,'#summary','fits');
   assert.equal(await page.locator('#summary').inputValue(),'fits');check('a fitting trusted paste over a selection is allowed');
+  await poll(()=>names(page),items=>items.some(n=>n.includes('visible paste matches')));
+  assert(!(await api(ui,'STATE')).drafts.some(d=>d.kind==='paste'&&d.text==='fits'));check('matching post-paste value is verified without storing an extra clipboard original');
+  // DOM-shaped adapter fixtures test our isolated-world code, not editor-vendor APIs.
+  // Actual vendor demos and portal samples run separately in tests/portals.mjs.
+  await page.evaluate(()=>{
+    const area=document.createElement('textarea');area.id='custom-paste';area.setAttribute('aria-label','Synthetic custom limit');document.body.append(area);
+    area.addEventListener('input',e=>{if(e.inputType==='insertFromPaste')setTimeout(()=>{area.value=area.value.slice(0,12);},350);});
+  });
+  const trimmed='Synthetic custom truncation 😀 end';
+  await paste(page,'#custom-paste',trimmed);
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text===trimmed));
+  await poll(()=>names(page),items=>items.some(n=>n.includes('paste needs review · original saved')));
+  await clickAccessible(page,name=>name.startsWith('Draft Cairn ·'));
+  assert((await names(page)).some(n=>n.includes('Review your paste')));
+  const reviewTree=await (await context.newCDPSession(page)).send('Accessibility.getFullAXTree');
+  assert(reviewTree.nodes.some(n=>n.value?.value===trimmed));assert(reviewTree.nodes.some(n=>n.value?.value===trimmed.slice(0,12)));
+  await page.keyboard.press('Escape');check('delayed custom truncation preserves the complete original and exposes visible-text review');
+  await paste(page,'#custom-paste','Synthetic interrupted paste');await page.keyboard.type(' more');
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text==='Synthetic interrupted paste'));
+  await clickAccessible(page,name=>name.startsWith('Draft Cairn ·'));
+  assert((await names(page)).some(n=>n.includes('Typing continued before')));await page.keyboard.press('Escape');
+  check('continued typing interrupts verification without falsely claiming text loss');
+  await page.evaluate(()=>{
+    const el=document.getElementById('custom-paste');el.addEventListener('paste',e=>{if(e.clipboardData.getData('text/plain')==='Synthetic cancelled paste')e.preventDefault();});
+  });
+  await paste(page,'#custom-paste','Synthetic cancelled paste');
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text==='Synthetic cancelled paste'));
+  check('website-cancelled paste keeps its original without altering the field');
+  for(const [name,classes,role] of [['quill','ql-editor',''],['prosemirror','ProseMirror',''],['ckeditor5','ck-editor__editable','textbox'],['tinymce-inline','mce-content-body','']]) {
+    const selector='#adapter-'+name;
+    await page.evaluate(({name,classes,role})=>{const el=document.createElement('div');el.id='adapter-'+name;el.className=classes;el.contentEditable='true';el.setAttribute('aria-label','Synthetic narrative');if(role)el.setAttribute('role',role);document.body.append(el);},{name,classes,role});
+    await page.locator(selector).fill('Synthetic '+name+' narrative 😀');
+    state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic '+name+' narrative 😀'));
+    assert.equal(state.drafts.find(d=>d.text==='Synthetic '+name+' narrative 😀').restorable,false);
+    await page.locator(selector).evaluate(el=>{el.setAttribute('aria-readonly','true');});
+    await page.locator('#impact').focus();await page.locator(selector).focus();
+    await poll(()=>names(page),items=>items.some(n=>n.includes('not protected in this field')));
+  }
+  check('four targeted rich-text DOM adapters capture plain text, refuse direct restore and respect read-only status');
+  await page.evaluate(()=>{
+    const el=document.createElement('div');el.id='rich-private';el.className='ProseMirror';el.contentEditable='true';el.setAttribute('data-cairn-ignore','');document.body.append(el);
+  });
+  await page.locator('#rich-private').fill('Synthetic rich excluded');await wait(450);
+  assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic rich excluded'));check('rich-text private regions never create recovery records');
   await page.goto(base+'/index.html?token=synthetic#example');await waitProtected(page);
   await page.locator('#impact').fill('Synthetic query-page answer');
   state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic query-page answer'));

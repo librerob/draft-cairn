@@ -82,7 +82,7 @@ async function handle(m,sender) {
     if(typeof m.title!=='string' || m.title.length>160 || !['draft','paste'].includes(m.kind))throw new Error('Invalid draft.');
     if(!Number.isInteger(m.slot) || m.slot<0 || m.slot>10000)throw new Error('Invalid field position.');
     const key=await digest(origin+pageKey+C.fieldIdentity(f)+m.slot+m.kind);
-    return S.capture({origin,pageKey,fieldKey,key,structure:m.structure,field:f,title:m.title,kind:m.kind,text:m.text,restorable:!url.search && !url.hash && m.kind==='draft'});
+    return S.capture({origin,pageKey,fieldKey,key,structure:m.structure,field:f,title:m.title,kind:m.kind,text:m.text,restorable:!url.search && !url.hash && m.kind==='draft' && ['TEXTAREA','INPUT'].includes(f.tag)});
   }
   if(!trusted(sender))throw new Error('Unavailable from this context.');
   switch(m.type) {

@@ -16,6 +16,26 @@ test('paste capacity respects existing text, selection and UTF-16',()=>{
   assert.equal(C.pasteCapacity('',0,0,'e\u0301',1).total,2);
   assert.equal(C.pasteCapacity('',0,0,'👨‍👩‍👧‍👦',10).oversized,true);
 });
+
+test('post-paste comparison preserves selection, Unicode and significant whitespace',()=>{
+  const expected=C.expectedPaste('abcdef',2,4,'😀\r\ne\u0301');
+  assert.equal(expected,'ab😀\ne\u0301ef');
+  assert.equal(C.comparePaste(expected,'ab😀\r\ne\u0301ef').changed,false);
+  assert.equal(C.comparePaste(expected,'ab😀\neef').changed,true);
+  assert.equal(C.comparePaste('one two','one  two').changed,true);
+  assert.equal(C.comparePaste('answer\n','answer').changed,true);
+  assert.equal(C.comparePaste(null,'answer').verified,false);
+  assert.equal(C.expectedPaste('abc',3,2,'x'),null);
+  assert.equal(C.expectedPaste('',0,0,'x'.repeat(C.MAX_TEXT+1)),null);
+});
+
+test('only named rich-text adapters qualify and keep sensitive-field exclusions',()=>{
+  for(const type of ['quill','prosemirror','ckeditor5','tinymce-inline']) {
+    const rich={...field,tag:'DIV',type,maxLength:-1};assert(C.allowedField(rich));
+    for(const delta of [{private:true},{readOnly:true},{disabled:true},{visible:false},{label:'Password'},{autocomplete:'cc-number'}])assert.equal(C.allowedField({...rich,...delta}),false);
+  }
+  assert.equal(C.allowedField({...field,tag:'DIV',type:'contenteditable'}),false);
+});
 test('never restore duplicate identity, changed structure, wrong page, existing uncertainty',()=>{
   const saved={field,pageKey:'a',structure:'b',restorable:true};
   assert.equal(C.matchField(saved,[field], 'a','b',true),field);
