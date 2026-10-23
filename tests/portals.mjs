@@ -31,12 +31,16 @@ const api=async(type,rest={})=>{const r=await ui.evaluate(async({type,rest})=>ch
 await api('PRIVACY',{metadata:true});
 const output=path.join(root,'test-results/portals');await mkdir(output,{recursive:true});
 const results=[];
+const publicUrl=url=>{try{const u=new URL(url);return u.origin+u.pathname;}catch{return 'unavailable';}};
 async function inspect(page,target,scope) {
-  const result={name:target.name,scope,url:page.url(),status:'not verified'};
+  const result={name:target.name,scope,url:publicUrl(page.url()),status:'not verified'};
   if(target.login){result.reason='Sign-in required; no account was used and no application fields were tested.';return result;}
   const origin=new URL(page.url()).origin;
   const tabId=await ui.evaluate(async url=>(await chrome.tabs.query({})).find(t=>t.url===url)?.id,page.url());
   await api('ENABLE',{origin,tabId});
+  const session=await context.newCDPSession(page);
+  const statusNames=async()=>(await session.send('Accessibility.getFullAXTree')).nodes.map(n=>n.name?.value || '');
+  for(let n=0;n<60;n++){if((await statusNames()).some(n=>n.startsWith('Draft Cairn ·')))break;await sleep(100);}
   const selectors=target.editor ? ['.ql-editor[contenteditable="true"]','.ProseMirror[contenteditable="true"]','.ck-editor__editable[contenteditable="true"][role="textbox"]'] : ['textarea'];
   let field;
   for(let attempt=0;attempt<12 && !field;attempt++) {
@@ -49,20 +53,39 @@ async function inspect(page,target,scope) {
     }
     if(!field)await sleep(500);
   }
-  if(!field){result.reason='No eligible visible narrative field reached; embedded forms, closed rounds or access gates may require a separate check.';result.frames=page.frames().length-1;return result;}
+  if(!field){
+    result.reason='No eligible visible narrative field reached; embedded forms, closed rounds or access gates may require a separate check.';
+    result.surfaces=[];
+    for(const frame of page.frames()) {
+      const surface={url:publicUrl(frame.url()),topLevel:frame===page.mainFrame(),textareas:await frame.locator('textarea').count().catch(()=>0)};
+      result.surfaces.push(surface);
+      if(frame===page.mainFrame())continue;
+      for(const candidate of await frame.locator('textarea').all()) {
+        if(!(await candidate.isVisible().catch(()=>false)) || !(await candidate.isEnabled().catch(()=>false)))continue;
+        const hint=await candidate.evaluate(el=>[el.id,el.name,el.getAttribute('aria-label'),el.labels?.[0]?.textContent].filter(Boolean).join(' '));
+        if(/password|email|phone|address|payment|bank|account|card|contact/i.test(hint))continue;
+        const text='Draft Cairn synthetic embedded-form exclusion check '+crypto.randomUUID();
+        await candidate.fill(text,{timeout:6000});await sleep(600);
+        const captured=(await api('STATE')).drafts.some(d=>d.text.includes(text));
+        result.status=captured ? 'unexpected frame capture' : 'embedded field exclusion confirmed';
+        result.reason='Trusted typing in this embedded narrative field is not captured. Open a standalone form when available; iframe recovery is unsupported.';
+        result.embeddedCapture=captured;return result;
+      }
+    }
+    result.pageTitle=await page.title();return result;
+  }
   result.field=await field.evaluate(el=>({tag:el.tagName,id:el.id,type:el.getAttribute('type'),classes:el.matches('[contenteditable]') ? el.className : undefined}));
   const marker='Draft Cairn synthetic compatibility check '+crypto.randomUUID()+'. This is test text, not an application. 😀';
   await field.fill(marker,{timeout:10000});
   let state;
   for(let n=0;n<40;n++){state=await api('STATE');if(state.drafts.some(d=>d.text.includes(marker)))break;await sleep(100);}
   const draft=state.drafts.find(d=>d.origin===origin && d.text.includes(marker));
-  if(!draft){result.reason='Trusted typing reached the field but no recovery record was observed.';return result;}
+  if(!draft){result.reason='Trusted typing reached the field but no recovery record was observed.';result.visibleMarker=await field.evaluate((el,text)=>el.innerText.includes(text),marker);result.pill=(await statusNames()).filter(n=>n.startsWith('Draft Cairn ·'));result.lastError=state.lastError;return result;}
   result.capture=true;result.copyText=draft.text.includes(marker);result.directRestoreAvailable=draft.restorable;
   await context.grantPermissions(['clipboard-read','clipboard-write'],{origin});
   await field.focus();await field.press('Control+A');
   const pasted='Draft Cairn synthetic pasted narrative. Complete ending 😀';
   await page.evaluate(text=>navigator.clipboard.writeText(text),pasted);await field.press('Control+V');await sleep(1900);
-  const session=await context.newCDPSession(page);
   const names=(await session.send('Accessibility.getFullAXTree')).nodes.map(n=>n.name?.value || '');
   result.paste=names.some(n=>n.includes('visible paste matches')) ? 'visible match' : names.some(n=>n.includes('paste needs review')) ? 'review original' : 'not verified';
   await page.screenshot({path:path.join(output,`${results.length+1}-${target.name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()}.png`)});

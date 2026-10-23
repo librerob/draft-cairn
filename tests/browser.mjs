@@ -138,6 +138,9 @@ try {
   assert.equal(await page.locator('#summary').inputValue(),'fits');check('a fitting trusted paste over a selection is allowed');
   await poll(()=>names(page),items=>items.some(n=>n.includes('visible paste matches')));
   assert(!(await api(ui,'STATE')).drafts.some(d=>d.kind==='paste'&&d.text==='fits'));check('matching post-paste value is verified without storing an extra clipboard original');
+  await paste(page,'#impact','Synthetic first line\r\nSecond 😀 é');
+  await poll(()=>names(page),items=>items.some(n=>n.includes('visible paste matches')));
+  assert.equal(await page.locator('#impact').inputValue(),'Synthetic first line\nSecond 😀 é');check('multiline trusted paste normalizes line endings and preserves Unicode');
   // DOM-shaped adapter fixtures test our isolated-world code, not editor-vendor APIs.
   // Actual vendor demos and portal samples run separately in tests/portals.mjs.
   await page.evaluate(()=>{
@@ -164,6 +167,10 @@ try {
   await paste(page,'#custom-paste','Synthetic cancelled paste');
   await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text==='Synthetic cancelled paste'));
   check('website-cancelled paste keeps its original without altering the field');
+  await page.evaluate(()=>{const el=document.createElement('textarea');el.id='removed-after-paste';document.body.append(el);el.addEventListener('paste',()=>setTimeout(()=>el.remove(),50));});
+  await paste(page,'#removed-after-paste','Synthetic removed field original');
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text==='Synthetic removed field original'));
+  check('a disappearing destination still preserves its original using the paste-time descriptor');
   for(const [name,classes,role] of [['quill','ql-editor',''],['prosemirror','ProseMirror',''],['ckeditor5','ck-editor__editable','textbox'],['tinymce-inline','mce-content-body','']]) {
     const selector='#adapter-'+name;
     await page.evaluate(({name,classes,role})=>{const el=document.createElement('div');el.id='adapter-'+name;el.className=classes;el.contentEditable='true';el.setAttribute('aria-label','Synthetic narrative');if(role)el.setAttribute('role',role);document.body.append(el);},{name,classes,role});
@@ -175,6 +182,16 @@ try {
     await poll(()=>names(page),items=>items.some(n=>n.includes('not protected in this field')));
   }
   check('four targeted rich-text DOM adapters capture plain text, refuse direct restore and respect read-only status');
+  await page.locator('#adapter-quill').evaluate(el=>el.removeAttribute('aria-readonly'));
+  await page.locator('#adapter-quill').focus();await page.locator('#adapter-quill').press('Control+A');
+  await page.evaluate(()=>navigator.clipboard.writeText('Synthetic rich whole-field paste 😀'));
+  await page.keyboard.press('Control+V');
+  await poll(()=>names(page),items=>items.some(n=>n.includes('visible paste matches')));
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic rich whole-field paste 😀'));
+  await page.locator('#adapter-quill').press('End');await page.evaluate(()=>navigator.clipboard.writeText(' partial'));
+  await page.keyboard.press('Control+V');
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text===' partial'));
+  check('rich whole-field paste is compared; partial rich selections preserve an original for manual review');
   await page.evaluate(()=>{
     const el=document.createElement('div');el.id='rich-private';el.className='ProseMirror';el.contentEditable='true';el.setAttribute('data-cairn-ignore','');document.body.append(el);
   });

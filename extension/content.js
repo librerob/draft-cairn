@@ -40,7 +40,7 @@
   function describe(el) {
     const rich=editorType(el), form=el.form || el.closest('form');
     return {tag:el.tagName, type:rich || el.type || 'textarea', id:shorten(el.id), name:shorten(el.getAttribute('name')),
-      label:shorten(el.labels?.[0]?.textContent || el.getAttribute('aria-label') || ''),
+      label:shorten(el.labels?.[0]?.textContent || el.getAttribute('aria-label') || (el.getAttribute('aria-labelledby') || '').split(/\s+/).slice(0,8).map(id=>document.getElementById(id)?.textContent || '').join(' ')),
       form:shorten(form?.id || form?.getAttribute('name') || ''),
       placeholder:shorten(el.getAttribute('placeholder') || el.getAttribute('data-placeholder')), autocomplete:shorten(el.getAttribute('autocomplete') || form?.getAttribute('autocomplete')),
       visible:Array.from(el.getClientRects()).some(r=>r.width>0 && r.height>0) &&
@@ -166,7 +166,7 @@
     const ignore=document.createElement('button');ignore.type='button';ignore.textContent='Never capture this field';
     ignore.onclick=async e=>{
       if(!e.isTrusted || !confirm('Stop capturing this field and delete its recovery revisions? Fields with the same identity on this page are excluded too. Library answers remain.'))return;
-      try{await message({type:'IGNORE_FIELD',field:describe(el)});excluded.add(el);if(pending?.el===el)pending=null;dialog.close();lastField=null;announce('not protected in this field · excluded in settings',true);}
+      try{await message({type:'IGNORE_FIELD',field:describe(el)});excluded.add(el);pasteIssues.delete(el);if(pasteWatch?.el===el){clearTimeout(pasteWatch.timer);pasteWatch=null;}if(pending?.el===el)pending=null;dialog.close();lastField=null;announce('not protected in this field · excluded in settings',true);}
       catch{result.textContent='Could not exclude this field. Turn protection off from the toolbar popup.';}
     };
     actions.append(copy,close,ignore); dialog.append(heading,note,label,area,counter,help,actions,result);
@@ -197,10 +197,11 @@
     const actual=valid ? textOf(watch.el) : '';
     const compared=C.comparePaste(watch.expected,actual);
     if(reason || !valid || !compared.verified || compared.changed) {
-      preservePaste(watch,reason || (!valid ? 'The field disappeared or became unavailable.' : !compared.verified ? 'This rich-text selection could not be compared reliably.' : 'The visible result differs from the expected paste. The website may have removed or changed text.'),actual,
+      preservePaste(watch,reason || (!valid ? 'The field disappeared or became unavailable.' : !compared.verified ? 'This selection or field size could not be compared reliably.' : 'The visible result differs from the expected paste. The website may have removed or changed text.'),actual,
         compared.verified && !reason && valid ? `Expected ${compared.expectedLength} UTF-16 units; visible ${compared.actualLength}. First difference at unit ${compared.first+1}. Line endings are normalized; formatting is not compared.` : 'Check interrupted or unsupported selection; no claim of missing text is made.');
     } else {
-      fieldStatus.set(watch.el,{text:'visible paste matches · website submission not checked'});focusedStatus();
+      const saved=fieldStatus.get(watch.el);
+      fieldStatus.set(watch.el,{text:'visible paste matches · '+(saved?.error ? saved.text : saved?.text?.includes('saved on this device') ? 'saved on this device' : 'save not confirmed')+' · submission not checked',error:!!saved?.error});focusedStatus();
     }
   }
   document.addEventListener('focusin',e=>{
@@ -244,7 +245,7 @@
     if (sender.id === chrome.runtime.id && m.type === 'RECHECK') {
       respond({ok:true});
       const version=activation;
-      message({type:'HELLO'}).then(data=>{if(version===activation){configure(data);active=true;focusedStatus();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);host?.remove();}});return;
+      message({type:'HELLO'}).then(data=>{if(version===activation){configure(data);active=true;focusedStatus();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);clearTimeout(pasteWatch?.timer);pasteWatch=null;pasteIssues.clear();host?.remove();}});return;
     }
     if (sender.id === chrome.runtime.id && m.type === 'START') {
       const version=++activation;respond({ok:true});
