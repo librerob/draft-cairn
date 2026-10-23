@@ -32,6 +32,8 @@ kit_files={
     'listing/privacy-policy.md':(root/'PRIVACY.md').read_bytes(),
     'SUBMISSION.md':(root/'docs/chrome-web-store.md').read_bytes(),
     'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_bytes(),
+    'COMPATIBILITY.md':(root/'docs/compatibility.md').read_bytes(),
+    'PUBLIC-SAMPLE-MATRIX.md':(root/'docs/portal-matrix.md').read_bytes(),
     'START-HERE.txt':(
         f'Draft Cairn {version} Chrome Web Store preparation kit\n\n'
         f'Extract this kit. Upload ONLY extension/{archive.name} as the extension package.\n'

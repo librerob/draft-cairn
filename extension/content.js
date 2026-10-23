@@ -133,7 +133,7 @@
     captures = captures.then(async()=>{
       if (!el.isConnected || !C.allowedField(describe(el))) return;
       return capture(await snapshot(el,text,kind),el);
-    }).catch(()=>announce('not saved — keep a separate copy',true));
+    }).catch(()=>{if(active)announce('not saved — keep a separate copy',true);return false;});
     return captures;
   }
   function flush() {
@@ -261,7 +261,7 @@
     const selection=window.getSelection();
     const whole=editorType(el) && selection?.rangeCount && el.contains(selection.anchorNode) && el.contains(selection.focusNode) && C.normalizePaste(selection.toString())===C.normalizePaste(before);
     const expected=editorType(el) ? (!before || whole ? C.expectedPaste('',0,0,text) : null) : C.expectedPaste(before,el.selectionStart,el.selectionEnd,text);
-    const watch={el,original:text,expected,version:activation,snapshot:snapshot(el,text,'paste')};pasteWatch=watch;
+    const watch={el,original:text,expected,version:activation,snapshot:snapshot(el,text,'paste').catch(()=>null)};pasteWatch=watch;
     watch.timer=setTimeout(()=>finishPaste(),1500);focusedStatus();
   },true);
   chrome.runtime.onMessage.addListener((m,sender,respond)=>{

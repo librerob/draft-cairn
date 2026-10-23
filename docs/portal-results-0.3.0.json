@@ -1,0 +1,273 @@
+{
+  "date": "2026-10-23T17:22:40.968Z",
+  "commit": "f9707b432abc1367129b003b80caf688825f8a53",
+  "browser": "151.0.7922.34",
+  "syntheticOnly": true,
+  "submissionPerformed": false,
+  "permissionPrompt": "Test copy pre-grants named public hosts; native prompts are not tested.",
+  "results": [
+    {
+      "name": "SmartyGrants",
+      "scope": "public top-level sample",
+      "url": "https://training4.smartygrants.com.au/testround",
+      "status": "not verified",
+      "reason": "No eligible visible narrative field reached; embedded forms, closed rounds or access gates may require a separate check.",
+      "surfaces": [
+        {
+          "url": "https://training4.smartygrants.com.au/testround",
+          "topLevel": true,
+          "textareas": 0
+        }
+      ],
+      "pageTitle": "Test Preview Round Settings - Alex R's Environment"
+    },
+    {
+      "name": "Submittable",
+      "scope": "public top-level sample",
+      "url": "https://accounts.submittable.com/u/login/identifier",
+      "status": "not verified",
+      "reason": "Sign-in required; no account was used and no application fields were tested."
+    },
+    {
+      "name": "Jotform grant template",
+      "scope": "public top-level sample",
+      "url": "https://www.jotform.com/form-templates/grant-application",
+      "status": "not verified",
+      "reason": "No eligible visible narrative field reached; embedded forms, closed rounds or access gates may require a separate check.",
+      "surfaces": [
+        {
+          "url": "https://www.jotform.com/form-templates/grant-application",
+          "topLevel": true,
+          "textareas": 0
+        },
+        {
+          "url": "https://www.jotform.com/form-templates/preview/50246885080962/classic&nofs&disableSmartEmbed=1",
+          "topLevel": false,
+          "textareas": 4
+        },
+        {
+          "url": "non-web frame",
+          "topLevel": false,
+          "textareas": 0
+        },
+        {
+          "url": "https://consentcdn.cookiebot.com/sdk/bc-v5.min.html",
+          "topLevel": false,
+          "textareas": 0
+        }
+      ],
+      "pageTitle": "Grant Application Form Template | Jotform"
+    },
+    {
+      "name": "Jotform grant template",
+      "scope": "embedded preview opened as a standalone page; embedding remains unsupported",
+      "url": "https://www.jotform.com/form-templates/preview/50246885080962/classic&nofs&disableSmartEmbed=1",
+      "status": "capture and reload recovery passed",
+      "field": {
+        "tag": "TEXTAREA",
+        "id": "input_33",
+        "type": null
+      },
+      "capture": true,
+      "copyText": true,
+      "directRestoreAvailable": true,
+      "paste": "visible match",
+      "pastedAnswerSaved": true,
+      "recoveryAfterReload": true,
+      "restore": "refused; copy back available"
+    },
+    {
+      "name": "Cognito Forms grant template",
+      "scope": "public top-level sample",
+      "url": "https://www.cognitoforms.com/templates/grant-application-template",
+      "status": "not verified",
+      "reason": "No eligible visible narrative field reached; embedded forms, closed rounds or access gates may require a separate check.",
+      "surfaces": [
+        {
+          "url": "https://www.cognitoforms.com/templates/grant-application-template",
+          "topLevel": true,
+          "textareas": 0
+        },
+        {
+          "url": "https://www.cognitoforms.com/f/B0C3a5tQlU6yutYOU9Qv-g/387",
+          "topLevel": false,
+          "textareas": 0
+        }
+      ],
+      "pageTitle": "Free Grant Application Template Template - Cognito Forms"
+    },
+    {
+      "name": "Cognito Forms grant template",
+      "scope": "embedded preview opened as a standalone page; embedding remains unsupported",
+      "url": "https://www.cognitoforms.com/f/B0C3a5tQlU6yutYOU9Qv-g/387",
+      "status": "not verified",
+      "reason": "No eligible visible narrative field reached; embedded forms, closed rounds or access gates may require a separate check.",
+      "surfaces": [
+        {
+          "url": "https://www.cognitoforms.com/f/B0C3a5tQlU6yutYOU9Qv-g/387",
+          "topLevel": true,
+          "textareas": 0
+        }
+      ],
+      "pageTitle": "Grant Application"
+    },
+    {
+      "name": "Wufoo builder demo",
+      "scope": "public top-level sample",
+      "url": "https://www.wufoo.com/form-builder/",
+      "status": "not verified",
+      "reason": "No eligible visible narrative field reached; embedded forms, closed rounds or access gates may require a separate check.",
+      "surfaces": [
+        {
+          "url": "https://www.wufoo.com/form-builder/",
+          "topLevel": true,
+          "textareas": 5
+        },
+        {
+          "url": "https://www.wufoo.com/form-builder/signup/",
+          "topLevel": false,
+          "textareas": 1
+        },
+        {
+          "url": "https://www.wufoo.com/form-builder/signup/",
+          "topLevel": false,
+          "textareas": 1
+        },
+        {
+          "url": "non-web frame",
+          "topLevel": false,
+          "textareas": 0
+        },
+        {
+          "url": "https://www.recaptcha.net/recaptcha/enterprise/anchor",
+          "topLevel": false,
+          "textareas": 0
+        },
+        {
+          "url": "https://www.recaptcha.net/recaptcha/enterprise/anchor",
+          "topLevel": false,
+          "textareas": 0
+        },
+        {
+          "url": "non-web frame",
+          "topLevel": false,
+          "textareas": 0
+        },
+        {
+          "url": "non-web frame",
+          "topLevel": false,
+          "textareas": 0
+        },
+        {
+          "url": "non-web frame",
+          "topLevel": false,
+          "textareas": 0
+        },
+        {
+          "url": "non-web frame",
+          "topLevel": false,
+          "textareas": 0
+        },
+        {
+          "url": "non-web frame",
+          "topLevel": false,
+          "textareas": 0
+        }
+      ],
+      "pageTitle": "Online Form Builder and Creator - NO Login Required | Wufoo"
+    },
+    {
+      "name": "Greenhouse application",
+      "scope": "public top-level sample",
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5065894008",
+      "status": "capture and reload recovery passed",
+      "field": {
+        "tag": "TEXTAREA",
+        "id": "question_14439958008",
+        "type": null
+      },
+      "capture": true,
+      "copyText": true,
+      "directRestoreAvailable": true,
+      "paste": "visible match",
+      "pastedAnswerSaved": true,
+      "recoveryAfterReload": true,
+      "restore": "passed"
+    },
+    {
+      "name": "Ashby application",
+      "scope": "public top-level sample",
+      "url": "https://jobs.ashbyhq.com/Ashby/0f5dbf59-687b-4d88-88a7-73ee0a66b48d/application",
+      "status": "capture and reload recovery passed",
+      "field": {
+        "tag": "TEXTAREA",
+        "id": "8656671d-078b-4c4e-9177-ead75a5c911e",
+        "type": null
+      },
+      "capture": true,
+      "copyText": true,
+      "directRestoreAvailable": false,
+      "paste": "visible match",
+      "pastedAnswerSaved": true,
+      "recoveryAfterReload": true,
+      "restore": "copy back only"
+    },
+    {
+      "name": "Quill official demo",
+      "scope": "public top-level sample",
+      "url": "https://quilljs.com/",
+      "status": "capture and reload recovery passed",
+      "field": {
+        "tag": "DIV",
+        "id": "",
+        "type": null,
+        "classes": "ql-editor"
+      },
+      "capture": true,
+      "copyText": true,
+      "directRestoreAvailable": false,
+      "paste": "visible match",
+      "pastedAnswerSaved": true,
+      "recoveryAfterReload": true,
+      "restore": "copy back only"
+    },
+    {
+      "name": "ProseMirror official demo",
+      "scope": "public top-level sample",
+      "url": "https://prosemirror.net/examples/basic/",
+      "status": "capture and reload recovery passed",
+      "field": {
+        "tag": "DIV",
+        "id": "",
+        "type": null,
+        "classes": "ProseMirror ProseMirror-example-setup-style"
+      },
+      "capture": true,
+      "copyText": true,
+      "directRestoreAvailable": false,
+      "paste": "visible match",
+      "pastedAnswerSaved": true,
+      "recoveryAfterReload": true,
+      "restore": "copy back only"
+    },
+    {
+      "name": "CKEditor 5 official demo",
+      "scope": "public top-level sample",
+      "url": "https://ckeditor.com/ckeditor-5/demo/feature-rich/",
+      "status": "capture and reload recovery passed",
+      "field": {
+        "tag": "DIV",
+        "id": "",
+        "type": null,
+        "classes": "ck-table-show-hidden-borders ck-blurred ck ck-content ck-editor__editable ck-rounded-corners ck-editor__editable_root ck-editor__editable_inline"
+      },
+      "capture": true,
+      "copyText": true,
+      "directRestoreAvailable": false,
+      "paste": "visible match",
+      "pastedAnswerSaved": true,
+      "recoveryAfterReload": true,
+      "restore": "copy back only"
+    }
+  ]
+}

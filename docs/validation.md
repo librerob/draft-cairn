@@ -1,6 +1,14 @@
 # Validation record
 
-22 October 2026 · synthetic fixtures only
+23 October 2026 · synthetic fixtures and public samples
+
+## 0.3.0 paste and rich-text coverage
+
+The new unit checks cover selection replacement, UTF-16, line-ending normalization, significant whitespace, ambiguous comparisons and the rich-adapter allowlist with sensitive-field exclusions. Chromium scenarios cover delayed clipping, cancellation, interrupted checks, removed fields, rich adapter capture, consumed native input, whole/partial rich selections and private regions, alongside the full storage/vault/UI regression suite.
+
+Actual application and editor checks are recorded separately in the [public sample matrix](portal-matrix.md), with the exact tested commit and CI run. Three application samples passed; blocked/unexercised configurations are explicitly marked. Public editor demos are not counted as application portals. No application was submitted and no applicant account or real answer was used.
+
+Native host-permission prompts and daily-use OS clipboard handling remain manual gates. Public-site tests pre-grant a named test host set in a temporary manifest; the shipping manifest still has no mandatory host access. A public-site workflow completing successfully means results were collected, not that all samples were compatible.
 
 ## 0.2.1 appearance coverage
 

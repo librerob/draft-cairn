@@ -155,6 +155,8 @@ try {
   assert((await names(page)).some(n=>n.includes('Review your paste')));
   const reviewTree=await (await context.newCDPSession(page)).send('Accessibility.getFullAXTree');
   assert(reviewTree.nodes.some(n=>n.value?.value===trimmed));assert(reviewTree.nodes.some(n=>n.value?.value===trimmed.slice(0,12)));
+  await mkdir(path.join(root,'test-results/screenshots'),{recursive:true});
+  await page.screenshot({animations:'disabled',path:path.join(root,'test-results/screenshots/paste-review.png')});
   await page.keyboard.press('Escape');check('delayed custom truncation preserves the complete original and exposes visible-text review');
   await paste(page,'#custom-paste','Synthetic interrupted paste');await page.keyboard.type(' more');
   await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.kind==='paste'&&d.text==='Synthetic interrupted paste'));

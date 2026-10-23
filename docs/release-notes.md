@@ -1,16 +1,9 @@
-Draft Cairn 0.2.1 preview — a simpler interface with light and dark themes.
+Draft Cairn 0.3.0 preview — paste checks and targeted rich-text recovery.
 
-The workspace, toolbar popup and larger on-page editor now share a minimal Material-inspired design: clean sans-serif typography, rounded controls, quieter surfaces, and a restrained green accent.
+- After a trusted paste, compare visible text after 1.5 seconds. Changed or unverified pastes offer the complete original and observed text for review, with a short-lived encrypted original if saving succeeds. Known HTML maxlength overflow is still stopped before insertion. A visible match does not verify server acceptance or later changes.
+- Capture rendered plain text from targeted top-level Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots. Rich-text recovery is copy back only; formatting and attachments are not saved. Trusted beforeinput covers model-managed editing, and checked pastes are explicitly saved before claiming success.
+- Publish a dated compatibility matrix with exact sample URLs and recorded results. Jotform's standalone grant preview, Greenhouse and Ashby samples passed typed capture, paste comparison and pasted-answer recovery after reload. Quill, ProseMirror and CKEditor official demos passed separately. SmartyGrants and Submittable remain unverified; embedded forms remain unsupported. See docs/portal-matrix.md for each result's scope.
 
-- Appearance follows the system by default. Choose System, Light or Dark in Sites & settings. The preference is stored with encrypted local settings, applies across extension pages and supported-site editors, and remains available while the vault is locked.
-- Dark mode covers fields, dialogs, status messages, menus and answer cards. The layout adapts to smaller windows. Reduced-motion and forced-color preferences are supported.
-- Fonts and icons stay local. There are no new permissions, runtime dependencies, remote fonts or outbound connections.
-- Encrypted library export now closes the passphrase form before starting the download, so immediately importing the file cannot be disrupted by the earlier dialog's close event.
+The Material-inspired light/dark interface, automatic encryption, optional passphrase vault, locked capture, local answer library, session-only drafts and site/field exclusions remain. No new permission or runtime dependency is added. No answers are sent to the developer. Native Chrome permission prompts, daily-use OS clipboard behavior and authenticated applicant workflows still need manual checks; no Web Store submission or payment was performed.
 
-Automatic answer encryption, the optional passphrase vault, locked capture, session-only drafts, site/field exclusions and library backups remain available. Forgotten vault or backup passphrases cannot be recovered. Clipboard history, readable exports, websites and a compromised live device remain outside vault protection.
-
-Validation includes 15 unit groups, 53 real Chromium integration scenarios, text/control contrast checks for both palettes, static/manifest/asset checks and reproducible packaging. See docs/validation.md and validation-results-0.2.1.json for the exact tested commit and scenario count. There has been no independent security audit.
-
-Native Chrome permission approval/denial/revocation, daily-use OS clipboard behavior and intended application portals still require supervised synthetic-data checks before Web Store submission. No store submission, payment or paid service has been activated.
-
-Extract the extension ZIP, verify SHA256SUMS, and load its manifest folder using Chrome Developer mode / Load unpacked. For store preparation, extract the separate kit and upload only its inner extension ZIP as the package.
+See docs/validation.md for automated evidence and remaining limits. There has been no independent security audit. Extract the extension ZIP, verify SHA256SUMS and load its manifest folder using Chrome Developer mode / Load unpacked. The separate store kit contains listing assets, policies, reviewer instructions and the compatibility matrix; upload only its inner extension ZIP as the package.
