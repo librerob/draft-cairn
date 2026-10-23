@@ -217,6 +217,21 @@
     lastField=el; pending={el,text:textOf(el)};
     fieldStatus.set(el,{text:'saving…'});focusedStatus(); clearTimeout(timer); timer=setTimeout(flush,250);
   },true);
+  // Some model-based editors consume native beforeinput and do not emit a native
+  // input event. Observe the rendered plain text after that trusted editing intent.
+  const richEdits=new WeakMap();
+  document.addEventListener('beforeinput',e=>{
+    if(!e.isTrusted || !active || !/^(insert|delete|historyUndo|historyRedo)/.test(e.inputType))return;
+    const el=fieldFrom(e.target);
+    if(!el || !editorType(el) || !C.allowedField(describe(el)))return;
+    if(pasteWatch && (pasteWatch.el!==el || e.inputType!=='insertFromPaste'))finishPaste('Typing continued before the paste check finished. Compare the original manually.');
+    const version=activation,edit={};richEdits.set(el,edit);
+    setTimeout(()=>{
+      if(!active || activation!==version || richEdits.get(el)!==edit || !el.isConnected || !C.allowedField(describe(el)))return;
+      if(pending && pending.el!==el)flush();
+      lastField=el;pending={el,text:textOf(el)};fieldStatus.set(el,{text:'saving…'});focusedStatus();clearTimeout(timer);timer=setTimeout(flush,250);
+    },0);
+  },true);
   document.addEventListener('focusout',()=>flush(),true);
   document.addEventListener('visibilitychange',()=>{if(document.hidden){finishPaste('The page was hidden before verification finished. Compare the original manually.');flush();}});
   window.addEventListener('pagehide',()=>{finishPaste('The page closed before verification finished. Compare the original manually.');flush();});

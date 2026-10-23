@@ -17,7 +17,7 @@ Protection must be enabled before the loss. Wait for **saved on this device**; t
 
 Two other everyday uses:
 
-- **An answer that won't fit.** You paste a 600-unit answer into a field with a declared 500-unit limit. Draft Cairn stops the oversized paste and opens the complete original in a larger editor, so you can edit it yourself. It cannot detect every custom website limit.
+- **An answer that won't fit.** You paste a 600-unit answer into a field with a declared 500-unit limit. Draft Cairn stops the oversized paste and opens the complete original in a larger editor, so you can edit it yourself. After an allowed paste, it also checks the visible result for silent changes and offers the original for review if needed. Server acceptance and later changes are not verified.
 - **A paragraph you use again.** You explicitly save an approved project description in the answer library. Next time, search for it and copy it into your application.
 
 This is an early preview. Commercial demand and broad compatibility have not been established. Keep a separate copy of important work.
@@ -40,11 +40,12 @@ Preparing a store listing? The release also includes a separate `draft-cairn-sto
 ## What it saves
 
 - Visible, editable standard textareas, and ordinary text inputs with a declared `maxlength` of at least 120.
+- Plain-text answers in targeted top-level Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots. Rich-text recovery uses copy back; formatting and attachments are not saved.
 - Up to 180 recovery records in a rolling history; the oldest recovery records are removed when the count or byte budget is reached, with a visible notice. Explicit library answers are never evicted. Up to four snapshots per field. Rapid edits update the current snapshot; revisions at least 30 seconds apart can remain as earlier snapshots.
 - One day of recovery by default on new installs (existing choices are preserved), configurable to 1, 3, 7, 14, or 30 days. Complete oversized pastes expire within one hour. Expiry cleanup runs hourly while Chrome is running and on reads/startup.
 - Library answers with a title and optional project. These remain until deleted; import/export uses a [documented v1 format](docs/library-format.md).
 
-The current release supports only the top-level page. Rich text editors, contenteditable, frames, browser-internal pages, and incognito are excluded. See [compatibility](docs/compatibility.md).
+The current source supports only the top-level page. Generic contenteditable, frames, shadow-root fields, browser-internal pages and incognito remain excluded. See the [public portal and editor sample matrix](docs/portal-matrix.md) and [precise compatibility limits](docs/compatibility.md). A public demo result does not establish compatibility with every customer portal using that technology.
 
 ## Appearance
 

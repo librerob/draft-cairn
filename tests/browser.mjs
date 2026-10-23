@@ -182,6 +182,13 @@ try {
     await poll(()=>names(page),items=>items.some(n=>n.includes('not protected in this field')));
   }
   check('four targeted rich-text DOM adapters capture plain text, refuse direct restore and respect read-only status');
+  await page.evaluate(()=>{
+    const el=document.createElement('div');el.id='model-editor';el.className='ProseMirror';el.contentEditable='true';document.body.append(el);
+    el.addEventListener('beforeinput',e=>{if(e.isTrusted && e.inputType==='insertText'){e.preventDefault();el.textContent=e.data;}});
+  });
+  await page.locator('#model-editor').fill('Synthetic model-managed rich narrative');
+  await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic model-managed rich narrative'));
+  check('trusted beforeinput captures a model-managed rich editor that consumes native input');
   await page.locator('#adapter-quill').evaluate(el=>el.removeAttribute('aria-readonly'));
   await page.locator('#adapter-quill').focus();await page.locator('#adapter-quill').press('Control+A');
   await page.evaluate(()=>navigator.clipboard.writeText('Synthetic rich whole-field paste 😀'));

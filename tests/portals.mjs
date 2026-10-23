@@ -12,15 +12,17 @@ const extension=path.join(temp,'extension');await cp(path.join(root,'extension')
 const targets=[
   {name:'SmartyGrants',url:'https://training4.smartygrants.com.au/testround'},
   {name:'Submittable',url:'https://manager.submittable.com/signin',login:true},
-  {name:'Jotform grant template',url:'https://www.jotform.com/form-templates/grant-application',standalone:/^https:\/\/(?:form|www)\.jotform\.com\/\d+(?:[/?]|$)/},
+  {name:'Jotform grant template',url:'https://www.jotform.com/form-templates/grant-application',standalone:/^https:\/\/(?:form|www)\.jotform\.com\/(?:form-templates\/preview\/)?\d+(?:[/?]|$)/},
   {name:'Cognito Forms grant template',url:'https://www.cognitoforms.com/templates/grant-application-template',standalone:/^https:\/\/www\.cognitoforms\.com\/f\//},
   {name:'Wufoo builder demo',url:'https://www.wufoo.com/form-builder/'},
+  {name:'Greenhouse application',url:'https://job-boards.greenhouse.io/anthropic/jobs/5065894008'},
+  {name:'Ashby application',url:'https://jobs.ashbyhq.com/Ashby/0f5dbf59-687b-4d88-88a7-73ee0a66b48d/?action=apply'},
   {name:'Quill official demo',url:'https://quilljs.com/',editor:true},
   {name:'ProseMirror official demo',url:'https://prosemirror.net/examples/basic/',editor:true},
   {name:'CKEditor 5 official demo',url:'https://ckeditor.com/ckeditor-5/demo/feature-rich/',editor:true}
 ];
 const manifest=JSON.parse(await readFile(path.join(extension,'manifest.json'),'utf8'));
-manifest.host_permissions=['https://training4.smartygrants.com.au/*','https://manager.submittable.com/*','https://www.jotform.com/*','https://form.jotform.com/*','https://www.cognitoforms.com/*','https://www.wufoo.com/*','https://quilljs.com/*','https://prosemirror.net/*','https://ckeditor.com/*'];
+manifest.host_permissions=['https://training4.smartygrants.com.au/*','https://manager.submittable.com/*','https://www.jotform.com/*','https://form.jotform.com/*','https://www.cognitoforms.com/*','https://www.wufoo.com/*','https://quilljs.com/*','https://prosemirror.net/*','https://ckeditor.com/*','https://job-boards.greenhouse.io/*','https://jobs.ashbyhq.com/*'];
 await writeFile(path.join(extension,'manifest.json'),JSON.stringify(manifest));
 const context=await chromium.launchPersistentContext(path.join(temp,'profile'),{headless:true,channel:'chromium',args:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`],viewport:{width:1280,height:800}});
 const worker=context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
@@ -31,7 +33,7 @@ const api=async(type,rest={})=>{const r=await ui.evaluate(async({type,rest})=>ch
 await api('PRIVACY',{metadata:true});
 const output=path.join(root,'test-results/portals');await mkdir(output,{recursive:true});
 const results=[];
-const publicUrl=url=>{try{const u=new URL(url);return u.origin+u.pathname;}catch{return 'unavailable';}};
+const publicUrl=url=>{try{const u=new URL(url);return ['http:','https:'].includes(u.protocol) ? u.origin+u.pathname : 'non-web frame';}catch{return 'unavailable';}};
 async function inspect(page,target,scope) {
   const result={name:target.name,scope,url:publicUrl(page.url()),status:'not verified'};
   if(target.login){result.reason='Sign-in required; no account was used and no application fields were tested.';return result;}
@@ -72,7 +74,8 @@ async function inspect(page,target,scope) {
         result.embeddedCapture=captured;return result;
       }
     }
-    result.pageTitle=await page.title();return result;
+    result.pageTitle=await page.title();
+    result.publicNotice=await page.locator('body').innerText().then(text=>text.slice(0,700)).catch(()=>'');return result;
   }
   result.field=await field.evaluate(el=>({tag:el.tagName,id:el.id,type:el.getAttribute('type'),classes:el.matches('[contenteditable]') ? el.className : undefined}));
   const marker='Draft Cairn synthetic compatibility check '+crypto.randomUUID()+'. This is test text, not an application. 😀';

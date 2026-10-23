@@ -2,7 +2,7 @@
 
 Effective 23 October 2026 · Draft Cairn 0.2.1 preview
 
-Draft Cairn keeps supported field text only on websites you explicitly enable. It also keeps complete oversized pastes temporarily, and library answers you deliberately save or import. No account is required. Nothing is sent to the developer.
+Draft Cairn keeps supported field text only on websites you explicitly enable. It also keeps complete oversized, changed or unverified paste originals temporarily, and library answers you deliberately save or import. No account is required. Nothing is sent to the developer.
 
 ## Information handled
 
@@ -33,13 +33,15 @@ Copy writes to the system clipboard. Other apps, clipboard managers, Windows cli
 
 ## Capture exclusions
 
-Only visible, editable standard long-answer fields on enabled top-level pages qualify. Password, payment, one-time-code, hidden and other sensitive-hint fields are filtered. Sensitive autocomplete tokens are excluded; `autocomplete="off"` is allowed. Incognito, frames and rich-text editors are unsupported. Filters are imperfect. Use only where you have authority to retain a local copy.
+Visible, editable standard long-answer fields and recognized top-level Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots qualify. Rich-text snapshots contain rendered plain text, not formatting or attachments, and support copy back only. Password, payment, one-time-code, hidden, read-only and other sensitive-hint fields are filtered. Sensitive autocomplete tokens are excluded; `autocomplete="off"` is allowed. Incognito, frames, generic contenteditable and shadow-root fields are unsupported. Filters are imperfect. Use only where you have authority to retain a local copy.
+
+Post-paste checks inspect the plain-text clipboard payload only during a trusted paste in a qualifying field. They compare visible text after 1.5 seconds, or keep an original for manual review when comparison is interrupted or a rich selection cannot be matched. Originals are encrypted under the selected storage mode. The page can hold at most four original/observed-text reviews in memory until dismissed, reload, protection off or close; vault locking does not erase text already present on a website or these page-memory copies. Visible matches do not prove server acceptance. No background clipboard history is collected.
 
 You can block a site from the popup. A field can be excluded from the larger on-page editor; fields with the same identity on that page are excluded together and their recovery revisions are deleted. A hashed exclusion and its origin are retained until removed in settings. Blocking a site stops capture but keeps earlier drafts unless you delete them.
 
 ## Retention and deletion
 
-New installations default to one day of recovery. Existing installations retain their choice. Options are 1, 3, 7, 14 or 30 days. Original oversized pastes expire within one hour. Expired records are excluded on reads and removed on successful writes, hourly cleanup or startup while Chrome runs. Closed-browser files may retain expired bytes until cleanup succeeds.
+New installations default to one day of recovery. Existing installations retain their choice. Options are 1, 3, 7, 14 or 30 days. Separate original-paste records expire within one hour. Expired records are excluded on reads and removed on successful writes, hourly cleanup or startup while Chrome runs. Closed-browser files may retain expired bytes until cleanup succeeds.
 
 Recovery is a rolling buffer: the oldest revisions can disappear earlier at the 180-record or 6 MiB total plaintext budget. Library capacity reserves space for recovery; library answers are never evicted. Evictions are shown in the UI.
 
