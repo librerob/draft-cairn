@@ -1,6 +1,14 @@
 # Validation record
 
-23 October 2026 · synthetic fixtures and public samples
+24 October 2026 · synthetic fixtures and public samples
+
+## 0.3.1 native toolbar popup
+
+The popup previously capped its body width at 100vw, allowing Chrome's initial narrow popup viewport to constrain the layout. The fix declares the document's intrinsic/minimum width and removes that viewport-relative body cap. The prior popup tests opened a tab at a preset 380px viewport, which did not test toolbar autosizing.
+
+A separate headed Chromium regression opens the actual action popup via chrome.action.openPopup, without assigning a popup viewport. Eight combinations cover light/dark appearance, protection on/off and 100%/125% display scaling. It measures settled document/body widths, horizontal overflow and control widths, checks the status/theme, and scrolls to the bottom recovery action. Screenshots and a compact popup-summary.json are uploaded by CI. The shipping manifest remains unchanged except for its version; the isolated test copy pre-grants only loopback access. This does not test native host-permission prompts or claim Windows-native execution.
+
+The public portal matrix retains its dated 0.3.0 results; the capture/storage JavaScript was not changed by this patch.
 
 ## 0.3.0 paste and rich-text coverage
 

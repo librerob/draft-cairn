@@ -1,9 +1,9 @@
-Draft Cairn 0.3.0 preview — paste checks and targeted rich-text recovery.
+Draft Cairn 0.3.1 — fix the narrow Chrome toolbar popup.
 
-- After a trusted paste, compare visible text after 1.5 seconds. Changed or unverified pastes offer the complete original and observed text for review, with a short-lived encrypted original if saving succeeds. Known HTML maxlength overflow is still stopped before insertion. A visible match does not verify server acceptance or later changes.
-- Capture rendered plain text from targeted top-level Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots. Rich-text recovery is copy back only; formatting and attachments are not saved. Trusted beforeinput covers model-managed editing, and checked pastes are explicitly saved before claiming success.
-- Publish a dated compatibility matrix with exact sample URLs and recorded results. Jotform's standalone grant preview, Greenhouse and Ashby samples passed typed capture, paste comparison and pasted-answer recovery after reload. Quill, ProseMirror and CKEditor official demos passed separately. SmartyGrants and Submittable remain unverified; embedded forms remain unsupported. See docs/portal-matrix.md for each result's scope.
+The popup now declares its minimum width on the document and no longer caps its body against Chrome's initial viewport. This prevents the narrow column of wrapped text reported in the published extension.
 
-The Material-inspired light/dark interface, automatic encryption, optional passphrase vault, locked capture, local answer library, session-only drafts and site/field exclusions remain. No new permission or runtime dependency is added. No answers are sent to the developer. Native Chrome permission prompts, daily-use OS clipboard behavior and authenticated applicant workflows still need manual checks; no Web Store submission or payment was performed.
+The light/dark interface, paste checks, recovery, answer library and encryption behavior are unchanged. No new permissions are added.
 
-See docs/validation.md for automated evidence and remaining limits. There has been no independent security audit. Extract the extension ZIP, verify SHA256SUMS and load its manifest folder using Chrome Developer mode / Load unpacked. The separate store kit contains listing assets, policies, reviewer instructions and the compatibility matrix; upload only its inner extension ZIP as the package.
+Validation includes the existing unit and Chromium regression suites plus a headed Chromium test opening the actual toolbar popup, rather than a tab with a preset viewport. See docs/validation.md for the exact results and remaining manual checks. The public portal matrix retains its dated 0.3.0 evidence; portal behavior was not changed by this layout fix.
+
+Update the existing Chrome Web Store item using draft-cairn-0.3.1.zip. Its manifest version is higher than 0.3.0. Upload only the install ZIP, not the outer preparation kit. Reload a test website after the update and open the toolbar popup again.

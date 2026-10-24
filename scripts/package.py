@@ -1,6 +1,6 @@
 """Deterministic ZIP: exact allowlist, fixed timestamps/modes, stored bytes."""
 from pathlib import Path
-import hashlib, json, zipfile
+import hashlib, json, zipfile, re
 root=Path(__file__).resolve().parents[1]
 extension=root/'extension'
 version=json.loads((extension/'manifest.json').read_text())['version']
@@ -34,15 +34,17 @@ kit_files={
     'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_text(encoding='utf-8').replace('(../portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
     'COMPATIBILITY.md':(root/'docs/compatibility.md').read_text(encoding='utf-8').replace('(portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
     'PUBLIC-SAMPLE-MATRIX.md':(root/'docs/portal-matrix.md').read_text(encoding='utf-8').replace('(store/manual-smoke-test.md)','(FINAL-MANUAL-CHECKS.md)').replace('(compatibility.md)','(COMPATIBILITY.md)').encode('utf-8'),
-    f'portal-results-{version}.json':(root/f'docs/portal-results-{version}.json').read_bytes(),
     'START-HERE.txt':(
         f'Draft Cairn {version} Chrome Web Store preparation kit\n\n'
         f'Extract this kit. Upload ONLY extension/{archive.name} as the extension package.\n'
         'Use listing/ assets in the separate listing fields. Do not upload this outer ZIP as an extension.\n\n'
         'Final native Chrome permission and OS clipboard checks are pending. See FINAL-MANUAL-CHECKS.md.\n'
-        'No store submission, registration, payment, or account verification has been performed.\n'
+        'The publisher reports an existing live Store listing. Update that existing item; do not create a duplicate.\n'
     ).encode('utf-8')
 }
+# Keep the matrix linked to the dated evidence actually tested, including on patch releases.
+for report in set(re.findall(r'\]\((portal-results-[0-9.]+\.json)\)', (root/'docs/portal-matrix.md').read_text(encoding='utf-8'))):
+    kit_files[report]=(root/'docs'/report).read_bytes()
 listing=(root/'docs/chrome-web-store.md').read_text(encoding='utf-8').split('## Draft listing\n',1)[1].split('**Suggested category:**',1)[0].strip().replace('**','')
 kit_files['listing/listing.txt']=(listing+'\n').encode('utf-8')
 deterministic_zip(kit,kit_files)

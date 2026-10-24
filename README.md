@@ -28,14 +28,14 @@ This is an early preview. Commercial demand and broad compatibility have not bee
 
 ## Install
 
-1. Download `draft-cairn-0.3.0.zip` from [Releases](https://github.com/librerob/draft-cairn/releases), verify it against `SHA256SUMS`, and extract it.
+1. Download `draft-cairn-0.3.1.zip` from [Releases](https://github.com/librerob/draft-cairn/releases), verify it against `SHA256SUMS`, and extract it.
 2. Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`.
 3. Pin Draft Cairn. On an ordinary HTTP/HTTPS website, open its popup and choose **Enable for this site**. Approve Chrome's site-access request.
 4. Type in a supported field and wait for **saved on this device**. Open **Recovery & library** to inspect saved text.
 
-For a source checkout, load the `extension/` folder directly. Chrome 120 or later is required. This release is not on the Chrome Web Store; no store submission or payment has been made.
+For a source checkout, load the `extension/` folder directly. Chrome 120 or later is required. The publisher reports an existing Chrome Web Store listing. Submit new packages to that existing item to update installed users.
 
-Preparing a store listing? The release also includes a separate `draft-cairn-store-kit-0.3.0.zip` with the icon, promotional tile, real-interface screenshots, listing copy, and reviewer instructions. Extract it and use its inner extension ZIP for the package upload. [Asset guide](docs/store/README.md) · [Final manual checks](docs/store/manual-smoke-test.md). Those manual permission and clipboard checks remain pending; prepared assets do not imply store approval.
+Preparing a store listing? The release also includes a separate `draft-cairn-store-kit-0.3.1.zip` with the icon, promotional tile, real-interface screenshots, listing copy, and reviewer instructions. Extract it and use its inner extension ZIP for the package upload. [Asset guide](docs/store/README.md) · [Final manual checks](docs/store/manual-smoke-test.md). Those manual permission and clipboard checks remain pending; prepared assets do not imply store approval.
 
 ## What it saves
 

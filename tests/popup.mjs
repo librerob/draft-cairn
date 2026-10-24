@@ -19,7 +19,7 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin='http://127.0.0.1:'+server.address().port;
 const out=path.join(root,'test-results');await mkdir(path.join(out,'screenshots'),{recursive:true});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const results=[];
+const results=[];let browserVersion;
 async function protocol(browser,targetId) {
   const pending=new Map();let sequence=0;
   browser.on('Target.receivedMessageFromTarget',e=>{
@@ -41,6 +41,7 @@ try {
       headless:false,channel:'chromium',viewport:null,
       args:['--disable-extensions-except='+extension,'--load-extension='+extension,'--window-size=1280,900','--force-device-scale-factor='+scale]
     });
+    browserVersion=context.browser().version();
     const worker=context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
     const id=new URL(worker.url()).host;
     const page=await context.newPage();await page.goto(origin);
@@ -68,12 +69,15 @@ try {
         const r=await send('Runtime.evaluate',{expression,returnByValue:true});
         assert(!r.exceptionDetails,'Popup evaluation failed');return r.result.value;
       };
-      let metrics;
+      let metrics,previous='',stable=0;
       for(let n=0;n<60;n++){
         metrics=await evaluate("({width:innerWidth,height:innerHeight,rootWidth:document.documentElement.scrollWidth,bodyWidth:document.body.getBoundingClientRect().width,scheme:getComputedStyle(document.documentElement).colorScheme,status:document.getElementById('status').textContent,toggle:document.getElementById('toggle').getBoundingClientRect().width,card:document.querySelector('.card').getBoundingClientRect().width})");
-        if(metrics.status===(enabled?'Protection is on':'Protection is off') && metrics.scheme===theme)break;
+        const current=JSON.stringify(metrics);
+        stable=current===previous ? stable+1 : 0;previous=current;
+        if(metrics.status===(enabled?'Protection is on':'Protection is off') && metrics.scheme===theme && stable>=3)break;
         await sleep(100);
       }
+      assert(stable>=3,'Native popup must settle before measuring');
       const label='popup-native-'+theme+'-'+(enabled?'on':'off')+'-'+scale;
       const shot=await send('Page.captureScreenshot',{format:'png'});
       await writeFile(path.join(out,'screenshots',label+'.png'),Buffer.from(shot.data,'base64'));
@@ -91,7 +95,7 @@ try {
     await context.close();context=null;
   }
 } finally {
-  await writeFile(path.join(out,'popup-summary.json'),JSON.stringify({nativeToolbar:true,syntheticOnly:true,permissionPrompt:'not tested; loopback host pre-granted in test copy',results},null,2)+'\n');
+  await writeFile(path.join(out,'popup-summary.json'),JSON.stringify({version:manifest.version,browser:browserVersion,nativeToolbar:true,syntheticOnly:true,permissionPrompt:'not tested; loopback host pre-granted in test copy',results},null,2)+'\n');
   await context?.close();await new Promise(resolve=>server.close(resolve));
   assert.equal(path.dirname(path.resolve(temp)),path.resolve(tmpdir()));
   await rm(temp,{recursive:true,force:true});
