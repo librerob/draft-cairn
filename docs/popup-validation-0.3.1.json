@@ -1,4 +1,6 @@
 {
+  "version": "0.3.1",
+  "browser": "151.0.7922.34",
   "nativeToolbar": true,
   "syntheticOnly": true,
   "permissionPrompt": "not tested; loopback host pre-granted in test copy",
@@ -20,8 +22,8 @@
       "scale": 1,
       "theme": "dark",
       "enabled": false,
-      "width": 380,
-      "height": 525,
+      "width": 395,
+      "height": 600,
       "rootWidth": 380,
       "bodyWidth": 380,
       "scheme": "dark",
@@ -34,7 +36,7 @@
       "theme": "light",
       "enabled": true,
       "width": 380,
-      "height": 525,
+      "height": 579,
       "rootWidth": 380,
       "bodyWidth": 380,
       "scheme": "light",
@@ -108,6 +110,6 @@
       "card": 340
     }
   ],
-  "testedCommit": "511af4da205ba6594c4f6b87410a235688fe10b2",
-  "run": "https://github.com/librerob/draft-cairn/actions/runs/40109414821"
+  "testedCommit": "2adde83e066a122437d0d22026c612a0f9521c73",
+  "run": "https://github.com/librerob/draft-cairn/actions/runs/40109760286"
 }
