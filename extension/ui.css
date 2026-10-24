@@ -126,7 +126,10 @@ dialog::backdrop{background:var(--scrim)}
 .site .row{margin-top:12px}
 .site>button{margin:8px 0 0 12px}
 #security-note{max-width:580px}
-.popup{width:380px;max-width:100vw;padding:20px;background:var(--paper)}
+/* Chrome autosizes toolbar popups from content; viewport-relative caps can trap
+   the initial narrow viewport. Declare an intrinsic width on the document. */
+html.popup-document{width:380px;min-width:380px}
+.popup{width:380px;min-width:380px;padding:20px;background:var(--paper)}
 .popup header{margin-bottom:24px}
 .popup header .badge{font-size:11px}
 .popup .brand{font-size:17px;gap:10px}

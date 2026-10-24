@@ -27,6 +27,7 @@ jobs:
       - run: npm test
       - run: npx playwright install chromium
       - run: npm run test:browser
+      - run: xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" node tests/popup.mjs
       - run: |
           python3 scripts/package.py
           cp dist/SHA256SUMS /tmp/first-checksum
@@ -34,11 +35,13 @@ jobs:
           cmp dist/SHA256SUMS /tmp/first-checksum
           cd dist && sha256sum --check SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
         with:
           name: validated-release
           path: |
             dist/
             test-results/browser-summary.json
+            test-results/popup-summary.json
             test-results/screenshots/*.png
           retention-days: 14
   release:
