@@ -1,12 +1,14 @@
 # Public application compatibility matrix
 
+Historical 0.3.0 results below remain dated evidence. Version 0.4.0 adds scoped frames/open shadow roots; its current public rerun and synthetic component results will be recorded separately. No authenticated grant-portal workflow is claimed.
+
 Tested 23 October 2026 using Chromium 151.0.7922.34 on Linux, the real installed extension and synthetic narrative text. **Three application samples passed capture, visible-paste comparison and saved-text recovery after reload.** This is sample-level evidence, not certification of an entire platform or a completed application workflow.
 
 [Recorded results](portal-results-0.3.0.json) · [Public-site run](https://github.com/librerob/draft-cairn/actions/runs/39995486919) · tested runtime commit `5d2b786caf01a024aa9e59960419982a37b9bfd3`. The harness pre-grants named test hosts in a temporary manifest; native permission prompts remain a separate manual check. A successful collection workflow does not mean every row passed.
 
 | Platform and exact sample | Typing capture | Visible paste / recovery after reload | Direct restore | Scope and limitation |
 | --- | --- | --- | --- | --- |
-| [Jotform grant preview](https://www.jotform.com/form-templates/preview/50246885080962/classic&nofs&disableSmartEmbed=1) | Passed, textarea `input_33` | Passed / passed | Refused after reload; copy back available | Opened the template preview as a standalone page and used Next to reach its narrative page without entering contact information. The embedded preview on the template landing page is unsupported. |
+| [Jotform grant preview](https://www.jotform.com/form-templates/preview/50246885080962/classic&nofs&disableSmartEmbed=1) | Passed, textarea `input_33` | Passed / passed | Refused after reload; copy back available | Opened the template preview as a standalone page and used Next to reach its narrative page without entering contact information. The embedded preview was unsupported in this tested 0.3.0 version; the new frame implementation needs separate evidence. |
 | [Greenhouse application](https://job-boards.greenhouse.io/anthropic/jobs/5065894008) | Passed, textarea `question_14439958008` | Passed / passed | Passed into the empty matched field | One public application question, tested without signing in or submitting an application. Other questions, uploads and tenant configurations were not tested. |
 | [Ashby application](https://jobs.ashbyhq.com/Ashby/0f5dbf59-687b-4d88-88a7-73ee0a66b48d/application) | Passed, textarea | Passed / passed | Copy back only | Opened the Application view of this public role. The tested entry retained a query string, so conservative restoration rules disabled direct restore. |
 | [SmartyGrants training round](https://training4.smartygrants.com.au/testround) | Not verified | Not verified | Not verified | Reached the public round information page; no editable narrative application field was reached without an applicant session. The closed Sneak Peek TEST round was also inspected. No account was created. |
@@ -21,7 +23,7 @@ For each passing sample, the harness typed a unique synthetic narrative, checked
 | [Quill](https://quilljs.com/) | Passed | Passed / passed | Copy back only |
 | [ProseMirror](https://prosemirror.net/examples/basic/) | Passed | Passed / passed | Copy back only |
 | [CKEditor 5](https://ckeditor.com/ckeditor-5/demo/feature-rich/) | Passed | Passed / passed | Copy back only |
-| Inline TinyMCE | DOM adapter fixture passed; vendor demo not tested | Not established on a vendor demo | Copy back only; iframe TinyMCE excluded |
+| Inline TinyMCE | DOM adapter fixture passed; vendor demo not tested | Not established on a vendor demo | Copy back only; iframe TinyMCE was excluded in this version |
 | Tiptap | Shares the ProseMirror DOM adapter; no separate live Tiptap configuration tested | Not separately established | Copy back only |
 
 These checks save rendered words, not formatting, images, attachments, collaboration state or the editor's internal document model. Quill and CKEditor consume native editing events differently from ordinary fields; the extension observes rendered text after trusted beforeinput editing intent and persists the checked result of trusted pastes too. Partial rich-text selections keep the clipboard original for manual comparison instead of claiming a reliable automatic match.

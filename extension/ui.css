@@ -155,3 +155,5 @@ html.popup-document{width:380px;min-width:380px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
 .card>.row+p{margin-top:14px}.draft .actions+p{margin-top:12px;margin-bottom:0}
+
+#site-origins{min-height:96px;height:108px;max-width:680px;margin:12px 0}

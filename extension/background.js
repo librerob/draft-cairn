@@ -44,6 +44,15 @@ async function finishPending() {
   for(const [name,item] of Object.entries(pending)) {
     if(!name.startsWith('enable-'))continue;
     if(!item || Date.now()-item.created>120000 || item.created>Date.now()){await chrome.storage.session.remove(name);continue;}
+    if(Array.isArray(item.origins)){
+      const origins=W.siteList(item.origins.join(' ')),state=await S.publicState(),policy=await managed();
+      if(origins.some(o=>state.blockedSites.includes(o) || !policyAllows(policy,o))){await chrome.storage.session.remove(name);continue;}
+      if(await chrome.permissions.contains({origins:[...new Set(origins.map(C.hostPattern))]})){
+        for(const origin of origins)await enable(origin);
+        await chrome.storage.session.remove(name);
+      }
+      continue;
+    }
     const origin=C.originOf(item.origin);
     if(await chrome.permissions.contains({origins:[C.hostPattern(origin)]})) {
       await enable(origin,item.tabId);await chrome.storage.session.remove(name);
@@ -67,7 +76,8 @@ function validateField(f) {
 async function handle(m,sender) {
   if(!m || typeof m.type!=='string')throw new Error('Invalid request.');
   if(sender.tab && !trusted(sender)) {
-    const {origin,state,url,policy,scope}=await activeOrigin(sender);
+    let context;try{context=await activeOrigin(sender);}catch(error){if(m.type==='HELLO')return {active:false};throw error;}
+    const {origin,state,url,policy,scope}=context;
     if(m.type==='LIBRARY_LIST'){const view=await S.load();return view.library.map(({id,title,project})=>({id,title,project}));}
     if(m.type==='LIBRARY_GET'){const view=await S.load(),answer=view.library.find(a=>a.id===m.id);if(!answer)throw new Error('Choose an existing library answer.');return {text:answer.text,title:answer.title};}
     if(m.type==='HELLO')return {active:true,scope,appearance:state.appearance,ignoredFields:state.ignoredFields.filter(f=>f.origin===origin).map(f=>f.id)};

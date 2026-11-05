@@ -226,10 +226,10 @@ $('enable-sites').onclick=async()=>{
   try{
     const origins=W.siteList($('site-origins').value);
     if(origins.some(o=>state.blockedSites.includes(o) || state.policy.allowed!==null && !state.policy.allowed.includes(o)))throw new Error('Site is blocked or not allowed by your organization.');
-    const pending=chrome.storage.session.set(Object.fromEntries(origins.map(origin=>['enable-batch-'+origin,{origin,created:Date.now()}])));
+    const pending=chrome.storage.session.set({'enable-batch':{origins,created:Date.now()}});
     const permission=chrome.permissions.request({origins:[...new Set(origins.map(Cairn.hostPattern))]});
     await pending;const granted=await permission;
-    if(!granted){await chrome.storage.session.remove(origins.map(o=>'enable-batch-'+o));throw new Error('Site access was not granted. Protection remains off.');}
+    if(!granted){await chrome.storage.session.remove('enable-batch');throw new Error('Site access was not granted. Protection remains off.');}
     await api('FINISH_ENABLE');await refresh();notice('Sites enabled. Reload their open pages before writing.');
   }catch(e){notice(e.message,true);}finally{button.disabled=false;}
 };

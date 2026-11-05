@@ -56,7 +56,8 @@
     if(ignoredFields.has(id)){excluded.add(el);return true;}
     return false;
   }
-  function configure(data){frameScope=data.scope || '';ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();checkedFields=new WeakMap();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;}
+  function deactivate(){activation++;active=false;pending=null;clearTimeout(timer);clearTimeout(pasteWatch?.timer);pasteWatch=null;pasteIssues.clear();root?.replaceChildren();host?.remove();host=null;root=null;status=null;}
+  function configure(data){if(!data.active){deactivate();return false;}active=true;frameScope=data.scope || '';ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();checkedFields=new WeakMap();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;return true;}
   const shorten = s => (s || '').trim().replace(/\s+/g,' ').slice(0,200);
   const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))), b=>b.toString(16).padStart(2,'0')).join('');
   function describe(el) {
@@ -103,7 +104,7 @@
     style.textContent = `:host{all:initial;color-scheme:light;--c-paper:#fff;--c-input:#f0f4f1;--c-ink:#1a211d;--c-muted:#505d55;--c-line:#748279;--c-primary:#226b4c;--c-on-primary:#fff;--c-error:#ffdad5;--c-on-error:#6e1712;--c-scrim:#101c1673;font:14px/1.6 'Segoe UI',Roboto,Arial,sans-serif;color:var(--c-ink)}
 :host([data-theme=dark]){color-scheme:dark;--c-paper:#1a211c;--c-input:#202923;--c-ink:#e1e9e2;--c-muted:#b2c0b5;--c-line:#85978a;--c-primary:#97d5b0;--c-on-primary:#093922;--c-error:#62302a;--c-on-error:#ffdad5;--c-scrim:#0009}
 @media(prefers-color-scheme:dark){:host(:not([data-theme=light]):not([data-theme=dark])){color-scheme:dark;--c-paper:#1a211c;--c-input:#202923;--c-ink:#e1e9e2;--c-muted:#b2c0b5;--c-line:#85978a;--c-primary:#97d5b0;--c-on-primary:#093922;--c-error:#62302a;--c-on-error:#ffdad5;--c-scrim:#0009}}
-*{box-sizing:border-box}button,textarea,input{font:inherit}input[type=search]{display:block;width:100%;padding:12px;border-radius:12px;border:1px solid var(--c-line);background:var(--c-input);color:var(--c-ink)}section[data-library]{border-top:1px solid var(--c-line);margin-top:20px;padding-top:20px}button{min-height:40px;padding:9px 16px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-primary);border-radius:999px;cursor:pointer;font-size:13px;font-weight:600}button:hover{background:var(--c-input)}button:focus-visible,textarea:focus-visible{outline:3px solid var(--c-primary);outline-offset:3px}.pill{position:fixed;bottom:16px;right:16px;z-index:2147483647;background:var(--c-paper);color:var(--c-primary);border:1px solid var(--c-line);box-shadow:0 3px 16px #0002;border-radius:999px;padding:10px 16px;max-width:min(380px,90vw);text-align:left;font-size:12px;font-weight:500}.error{background:var(--c-error);color:var(--c-on-error)}dialog{color:var(--c-ink);background:var(--c-paper);border:1px solid var(--c-line);border-radius:24px;padding:24px;width:min(700px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 70px #0004}dialog::backdrop{background:var(--c-scrim)}h2{font-size:22px;line-height:1.35;font-weight:500;margin:0 0 12px}textarea{display:block;width:100%;height:38vh;min-height:160px;resize:vertical;padding:14px;background:var(--c-input);color:var(--c-ink);border:1px solid var(--c-line);border-radius:12px;line-height:1.65}label{display:block;font-weight:600;margin-bottom:8px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.primary{background:var(--c-primary);color:var(--c-on-primary)}.primary:hover{background:var(--c-primary)}p{margin:10px 0}small{display:block;color:var(--c-muted)}@media(forced-colors:active){.pill,.primary,dialog{border:1px solid ButtonText}}`;
+*{box-sizing:border-box}button,textarea,input{font:inherit}input[type=search]{display:block;width:100%;padding:12px;border-radius:12px;border:1px solid var(--c-line);background:var(--c-input);color:var(--c-ink)}section[data-library]{border-top:1px solid var(--c-line);margin-top:20px;padding-top:20px}button{min-height:40px;padding:9px 16px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-primary);border-radius:999px;cursor:pointer;font-size:13px;font-weight:600}button:hover{background:var(--c-input)}button:disabled{opacity:.6;cursor:default}button:focus-visible,textarea:focus-visible{outline:3px solid var(--c-primary);outline-offset:3px}.pill{position:fixed;bottom:16px;right:16px;z-index:2147483647;background:var(--c-paper);color:var(--c-primary);border:1px solid var(--c-line);box-shadow:0 3px 16px #0002;border-radius:999px;padding:10px 16px;max-width:min(380px,90vw);text-align:left;font-size:12px;font-weight:500}.error{background:var(--c-error);color:var(--c-on-error)}dialog{color:var(--c-ink);background:var(--c-paper);border:1px solid var(--c-line);border-radius:24px;padding:24px;width:min(700px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 70px #0004}dialog::backdrop{background:var(--c-scrim)}h2{font-size:22px;line-height:1.35;font-weight:500;margin:0 0 12px}textarea{display:block;width:100%;height:38vh;min-height:160px;resize:vertical;padding:14px;background:var(--c-input);color:var(--c-ink);border:1px solid var(--c-line);border-radius:12px;line-height:1.65}label{display:block;font-weight:600;margin-bottom:8px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.primary{background:var(--c-primary);color:var(--c-on-primary)}.primary:hover{background:var(--c-primary)}p{margin:10px 0}small{display:block;color:var(--c-muted)}@media(forced-colors:active){.pill,.primary,dialog{border:1px solid ButtonText}}`;
     root.append(style);
     status = document.createElement('button');
     status.className = 'pill'; status.type = 'button'; status.setAttribute('aria-live','polite');
@@ -233,7 +234,13 @@
     const insert=document.createElement('button');insert.type='button';insert.className='primary';insert.textContent='Insert at saved cursor';insert.disabled=true;
     const note=document.createElement('p');note.textContent='Choose an answer to preview below. Existing text outside your selection stays. Rich editors support copying only. Inserting makes the text available to this website.';
     const preview=document.createElement('textarea');preview.readOnly=true;preview.setAttribute('aria-label','Result after insertion');preview.style.height='120px';
-    section.append(label,search,options,note,fit,preview,insert);dialog.append(section);search.focus();
+    const controls=dialog.querySelector('.actions'),answerLabel=dialog.querySelector('label[for="cairn-answer"]');
+    dialog.querySelector('h2').textContent='Use a library answer';
+    dialog.querySelector('p').textContent='Choose a saved paragraph, review its fit and result, then insert when ready.';
+    dialog.querySelector('small')?.remove();
+    answerLabel.textContent='Selected answer (editable copy)';area.style.height='120px';area.style.minHeight='120px';area.value='';counter.textContent='';
+    for(const button of controls.querySelectorAll('button'))if(['Use library answer','Never capture this field'].includes(button.textContent))button.hidden=true;
+    section.append(label,search,options,answerLabel,area,counter,note,fit,preview,insert);dialog.insertBefore(section,controls);search.focus();
     let selected=false;
     function update(){
       const expected=C.expectedPaste(destination.value,destination.start,destination.end,area.value);
@@ -259,7 +266,7 @@
     insert.onclick=async e=>{
       if(!e.isTrusted || insert.disabled)return;insert.disabled=true;
       try{
-        await message({type:'HELLO'}); // Recheck permission/policy immediately before releasing text.
+        if(!(await message({type:'HELLO'})).active)throw new Error(); // Recheck access immediately before releasing text.
         if(await excludedField(el) || !active || !el.isConnected || !C.allowedField(describe(el)) || editorType(el) || location.href!==destination.url || C.fieldIdentity(describe(el))!==destination.identity || el.value!==destination.value)throw new Error();
         const expected=C.expectedPaste(destination.value,destination.start,destination.end,area.value);
         if(expected===null || W.fit(expected,el.maxLength,hintFor(el)).blocked)throw new Error();
@@ -369,13 +376,13 @@
     if (sender.id === chrome.runtime.id && m.type === 'RECHECK') {
       respond({ok:true});
       const version=activation;
-      message({type:'HELLO'}).then(data=>{if(version===activation){configure(data);active=true;focusedStatus();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);clearTimeout(pasteWatch?.timer);pasteWatch=null;pasteIssues.clear();host?.remove();}});return;
+      message({type:'HELLO'}).then(data=>{if(version===activation){if(!configure(data))return;focusedStatus();}}).catch(()=>{if(version===activation){deactivate();}});return;
     }
     if (sender.id === chrome.runtime.id && m.type === 'START') {
       const version=++activation;respond({ok:true});
-      message({type:'HELLO'}).then(data=>{if(version===activation){configure(data);active=true;focusedStatus();}}).catch(()=>{});return;
+      message({type:'HELLO'}).then(data=>{if(version===activation){if(!configure(data))return;focusedStatus();}}).catch(()=>{});return;
     }
-    if (sender.id === chrome.runtime.id && m.type === 'STOP') {activation++;active=false;pending=null;clearTimeout(timer);clearTimeout(pasteWatch?.timer);pasteWatch=null;pasteIssues.clear();host?.remove();respond({ok:true});return;}
+    if (sender.id === chrome.runtime.id && m.type === 'STOP') {deactivate();respond({ok:true});return;}
     if (sender.id !== chrome.runtime.id || m.type !== 'RESTORE') return;
     (async()=>{
       if (!active || embedded) return {ok:false,error:'Protection is off. Copy the answer instead.'};
@@ -395,5 +402,5 @@
     return true;
   });
   const initialVersion=activation;
-  message({type:'HELLO'}).then(data=>{if(initialVersion!==activation)return;configure(data);active=true;if(document.documentElement)focusedStatus();else document.addEventListener('DOMContentLoaded',()=>{if(active)focusedStatus();},{once:true});}).catch(()=>{});
+  message({type:'HELLO'}).then(data=>{if(initialVersion!==activation)return;if(!configure(data))return;if(document.documentElement)focusedStatus();else document.addEventListener('DOMContentLoaded',()=>{if(active)focusedStatus();},{once:true});}).catch(()=>{});
 })();
