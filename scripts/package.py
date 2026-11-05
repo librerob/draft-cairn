@@ -30,8 +30,11 @@ kit_files={
     'listing/screenshot-library-dark-1280x800.png':(root/'docs/images/library-dark.png').read_bytes(),
     'listing/reviewer-instructions.txt':(root/'docs/store/reviewer-instructions.txt').read_bytes(),
     'listing/privacy-policy.md':(root/'PRIVACY.md').read_bytes(),
+    'tester-kit.md':(root/'docs/tester-kit.md').read_bytes(),
+    'managed-policy.md':(root/'docs/managed-policy.md').read_bytes(),
+    'EDGE-HANDOFF.md':(root/'docs/edge-handoff.md').read_bytes(),
     'SUBMISSION.md':(root/'docs/chrome-web-store.md').read_bytes(),
-    'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_text(encoding='utf-8').replace('(../portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
+    'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_text(encoding='utf-8').replace('(../portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').replace('(../tester-kit.md)','(tester-kit.md)').encode('utf-8'),
     'COMPATIBILITY.md':(root/'docs/compatibility.md').read_text(encoding='utf-8').replace('(portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
     'PUBLIC-SAMPLE-MATRIX.md':(root/'docs/portal-matrix.md').read_text(encoding='utf-8').replace('(store/manual-smoke-test.md)','(FINAL-MANUAL-CHECKS.md)').replace('(compatibility.md)','(COMPATIBILITY.md)').encode('utf-8'),
     'START-HERE.txt':(

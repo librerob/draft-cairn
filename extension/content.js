@@ -109,12 +109,12 @@
     status.className = 'pill'; status.type = 'button'; status.setAttribute('aria-live','polite');
     status.title = 'Open the editor or choose a library answer for this field (Alt+Shift+L)';
     status.onclick = e=>{if(e.isTrusted && lastField?.isConnected && C.allowedField(describe(lastField))) {const issue=pasteIssues.get(lastField);editor(lastField,issue?.original ?? textOf(lastField),false,issue);}};
-    status.textContent = 'Draft Cairn Â· choose a supported answer field';
+    status.textContent = 'Draft Cairn · choose a supported answer field';
     root.append(status);
     document.documentElement.append(host);
   }
   function announce(text, error = false) {
-    mount(); status.textContent = `Draft Cairn Â· ${text}`; status.classList.toggle('error',error);
+    mount(); status.textContent = `Draft Cairn · ${text}`; status.classList.toggle('error',error);
   }
   async function focusedStatus() {
     if (!active) return;
@@ -123,18 +123,18 @@
     if (focused===host || embedded && !document.hasFocus()) return;
     if (el && C.allowedField(describe(el))) {
       if(ignoredFields.size) {
-        announce('checking fieldâ€¦');
+        announce('checking field…');
         const blocked=await excludedField(el);
         if(version!==focusVersion || !active)return;
-        if(blocked){lastField=null;announce('not protected in this field Â· excluded in settings',true);return;}
+        if(blocked){lastField=null;announce('not protected in this field · excluded in settings',true);return;}
       }
       lastField=el;
       const issue=pasteIssues.get(el);
-      if(issue){announce(issue.saved===false ? 'paste needs review Â· original not saved Â· click to copy' : issue.saved ? 'paste needs review Â· original saved Â· click to review' : 'paste needs review Â· saving originalâ€¦',true);return;}
-      if(pasteWatch?.el===el){announce('checking visible pasteâ€¦');return;}
+      if(issue){announce(issue.saved===false ? 'paste needs review · original not saved · click to copy' : issue.saved ? 'paste needs review · original saved · click to review' : 'paste needs review · saving original…',true);return;}
+      if(pasteWatch?.el===el){announce('checking visible paste…');return;}
       const saved=fieldStatus.get(el);
-      announce(saved?.text || (editorType(el) ? 'rich text Â· plain-text recovery Â· not saved yet' : 'supported field Â· not saved yet'),saved?.error || false);
-      const hint=hintFor(el);if(hint){const report=W.fit(textOf(el),el.maxLength,hint);status.textContent+=' Â· '+report.message;}
+      announce(saved?.text || (editorType(el) ? 'rich text · plain-text recovery · not saved yet' : 'supported field · not saved yet'),saved?.error || false);
+      const hint=hintFor(el);if(hint){const report=W.fit(textOf(el),el.maxLength,hint);status.textContent+=' · '+report.message;}
     } else {
       lastField=null;
       const editable=focused?.matches?.('textarea,input,iframe,[contenteditable]:not([contenteditable="false"]),[role="textbox"]') || focused?.isContentEditable || focused?.shadowRoot?.activeElement;
@@ -148,11 +148,11 @@
       const result=await message(snapshot);
       if (!active || version!==activation) return;
       // A completed earlier write must not label a newer, unsaved edit as saved.
-      if (snapshot.kind==='paste' || textOf(el)===snapshot.text) fieldStatus.set(el,{text:result.evicted ? 'saved Â· oldest recovery revisions removed' : 'saved on this device'+(editorType(el) ? ' Â· plain text Â· copy back' : '')});
+      if (snapshot.kind==='paste' || textOf(el)===snapshot.text) fieldStatus.set(el,{text:result.evicted ? 'saved · oldest recovery revisions removed' : 'saved on this device'+(editorType(el) ? ' · plain text · copy back' : '')});
       return true;
     } catch {
       if (!active || version!==activation) return;
-      fieldStatus.set(el,{text:'not saved â€” open recovery or keep a separate copy',error:true});
+      fieldStatus.set(el,{text:'not saved — open recovery or keep a separate copy',error:true});
       return false;
     } finally {
       focusedStatus();
@@ -170,7 +170,7 @@
     captures = captures.then(async()=>{
       if (!el.isConnected || !C.allowedField(describe(el))) return;
       return capture(await snapshot(el,text,kind),el);
-    }).catch(()=>{if(active)announce('not saved â€” keep a separate copy',true);return false;});
+    }).catch(()=>{if(active)announce('not saved — keep a separate copy',true);return false;});
     return captures;
   }
   function flush() {
@@ -181,7 +181,7 @@
     mount();
     if (root.querySelector('dialog')) return;
     const before = activeElement();
-    const destination={value:textOf(el),start:el.selectionStart,end:el.selectionEnd,identity:C.fieldIdentity(describe(el))};
+    const destination={url:location.href,value:textOf(el),start:el.selectionStart,end:el.selectionEnd,identity:C.fieldIdentity(describe(el))};
     const dialog = document.createElement('dialog');
     dialog.setAttribute('aria-labelledby','cairn-heading');
     const heading = document.createElement('h2'); heading.id = 'cairn-heading';
@@ -204,7 +204,7 @@
     const ignore=document.createElement('button');ignore.type='button';ignore.textContent='Never capture this field';
     ignore.onclick=async e=>{
       if(!e.isTrusted || !confirm('Stop capturing this field and delete its recovery revisions? Fields with the same identity on this page are excluded too. Library answers remain.'))return;
-      try{await message({type:'IGNORE_FIELD',field:describe(el)});excluded.add(el);pasteIssues.delete(el);if(pasteWatch?.el===el){clearTimeout(pasteWatch.timer);pasteWatch=null;}if(pending?.el===el)pending=null;dialog.close();lastField=null;announce('not protected in this field Â· excluded in settings',true);}
+      try{await message({type:'IGNORE_FIELD',field:describe(el)});excluded.add(el);pasteIssues.delete(el);if(pasteWatch?.el===el){clearTimeout(pasteWatch.timer);pasteWatch=null;}if(pending?.el===el)pending=null;dialog.close();lastField=null;announce('not protected in this field · excluded in settings',true);}
       catch{result.textContent='Could not exclude this field. Turn protection off from the toolbar popup.';}
     };
     const library=document.createElement('button');library.type='button';library.textContent='Use library answer';
@@ -238,7 +238,7 @@
     function update(){
       const expected=C.expectedPaste(destination.value,destination.start,destination.end,area.value);
       const report=W.fit(expected ?? area.value,el.maxLength,hintFor(el));
-      preview.value=expected ?? '';fit.textContent=report.message+(destination.start!==destination.end ? ' Â· selected website text will be replaced' : '');
+      preview.value=expected ?? '';fit.textContent=report.message+(destination.start!==destination.end ? ' · selected website text will be replaced' : '');
       insert.disabled=!selected || report.blocked || expected===null || !!editorType(el);
     }
     area.addEventListener('input',update);
@@ -249,7 +249,7 @@
         const matches=items.filter(a=>(a.title+' '+a.project).toLowerCase().includes(search.value.toLowerCase()));
         if(!matches.length)options.textContent='No matching library answers. Save an answer in Recovery & library first.';
         for(const item of matches.slice(0,30)){
-          const choice=document.createElement('button');choice.type='button';choice.textContent=item.title+(item.project ? ' Â· '+item.project : '');
+          const choice=document.createElement('button');choice.type='button';choice.textContent=item.title+(item.project ? ' · '+item.project : '');
           choice.onclick=async e=>{if(!e.isTrusted)return;try{const answer=await message({type:'LIBRARY_GET',id:item.id});if(!dialog.isConnected || !active)return;area.value=answer.text;selected=true;counter.textContent=W.fit(area.value,el.maxLength,hintFor(el)).message;update();}catch{fit.textContent='Unlock your vault in the workspace before using library answers.';}};
           options.append(choice);
         }
@@ -260,16 +260,16 @@
       if(!e.isTrusted || insert.disabled)return;insert.disabled=true;
       try{
         await message({type:'HELLO'}); // Recheck permission/policy immediately before releasing text.
-        if(await excludedField(el) || !active || !el.isConnected || !C.allowedField(describe(el)) || editorType(el) || C.fieldIdentity(describe(el))!==destination.identity || el.value!==destination.value)throw new Error();
+        if(await excludedField(el) || !active || !el.isConnected || !C.allowedField(describe(el)) || editorType(el) || location.href!==destination.url || C.fieldIdentity(describe(el))!==destination.identity || el.value!==destination.value)throw new Error();
         const expected=C.expectedPaste(destination.value,destination.start,destination.end,area.value);
         if(expected===null || W.fit(expected,el.maxLength,hintFor(el)).blocked)throw new Error();
         const proto=el.tagName==='TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
         Object.getOwnPropertyDescriptor(proto,'value').set.call(el,expected);
         el.dispatchEvent(new Event('input',{bubbles:true,composed:true}));el.dispatchEvent(new Event('change',{bubbles:true,composed:true}));
-        fit.textContent='Inserted Â· checking what the website retainedâ€¦';
+        fit.textContent='Inserted · checking what the website retained…';
         await new Promise(resolve=>setTimeout(resolve,1500));
         if(!active || !el.isConnected || el.value!==expected){fit.textContent='The website changed or removed the inserted text. Your library original is unchanged. Review and copy it manually.';return;}
-        const saved=await enqueue(el,expected);fit.textContent='Visible insertion matches Â· '+(saved ? 'saved on this device' : 'not saved; keep a separate copy')+' Â· submission not checked';
+        const saved=await enqueue(el,expected);fit.textContent='Visible insertion matches · '+(saved ? 'saved on this device' : 'not saved; keep a separate copy')+' · submission not checked';
       }catch{fit.textContent='The destination changed or protection is unavailable. Reopen the editor to choose the field again.';}
     };
   }
@@ -296,11 +296,11 @@
       // A trusted paste can be entirely model-managed, with no native input event.
       // Save the checked visible result too; an earlier typing save is not evidence
       // that this paste has reached storage.
-      fieldStatus.set(watch.el,{text:'visible paste matches Â· savingâ€¦'});focusedStatus();
+      fieldStatus.set(watch.el,{text:'visible paste matches · saving…'});focusedStatus();
       enqueue(watch.el,actual).then(saved=>{
         if(!active || watch.version!==activation || !watch.el.isConnected || textOf(watch.el)!==actual || pasteWatch || pasteIssues.has(watch.el))return;
         const previous=fieldStatus.get(watch.el);
-        fieldStatus.set(watch.el,{text:'visible paste matches Â· '+(saved ? 'saved on this device' : 'not saved Â· keep a separate copy')+(previous?.text?.includes('oldest recovery') ? ' Â· oldest recovery revisions removed' : '')+' Â· submission not checked',error:!saved});focusedStatus();
+        fieldStatus.set(watch.el,{text:'visible paste matches · '+(saved ? 'saved on this device' : 'not saved · keep a separate copy')+(previous?.text?.includes('oldest recovery') ? ' · oldest recovery revisions removed' : '')+' · submission not checked',error:!saved});focusedStatus();
       });
     }
   }
@@ -315,7 +315,7 @@
     if(pasteWatch && (pasteWatch.el!==el || e.inputType!=='insertFromPaste'))finishPaste('Typing continued before the paste check finished. Compare the original manually.');
     if (pending && pending.el !== el) flush();
     lastField=el; pending={el,text:textOf(el)};
-    fieldStatus.set(el,{text:'savingâ€¦'});focusedStatus(); clearTimeout(timer); timer=setTimeout(flush,250);
+    fieldStatus.set(el,{text:'saving…'});focusedStatus(); clearTimeout(timer); timer=setTimeout(flush,250);
   },true);
   // Some model-based editors consume native beforeinput and do not emit a native
   // input event. Observe the rendered plain text after that trusted editing intent.
@@ -329,7 +329,7 @@
     setTimeout(()=>{
       if(!active || activation!==version || richEdits.get(el)!==edit || !el.isConnected || !C.allowedField(describe(el)))return;
       if(pending && pending.el!==el)flush();
-      lastField=el;pending={el,text:textOf(el)};fieldStatus.set(el,{text:'savingâ€¦'});focusedStatus();clearTimeout(timer);timer=setTimeout(flush,250);
+      lastField=el;pending={el,text:textOf(el)};fieldStatus.set(el,{text:'saving…'});focusedStatus();clearTimeout(timer);timer=setTimeout(flush,250);
     },0);
   },true);
   document.addEventListener('focusout',()=>flush(),true);
@@ -341,7 +341,7 @@
     if (!active || !el || !C.allowedField(describe(el)) || !e.clipboardData || !e.clipboardData.types.includes('text/plain')) return;
     if(ignoredFields.size && checkedFields.get(el)!==C.fieldIdentity(describe(el))){announce('paste check unavailable until field exclusion check finishes',true);return;}
     const text=e.clipboardData.getData('text/plain');
-    if(!text || text.length>C.MAX_TEXT){announce('paste too large to preserve Â· keep a separate copy',true);return;}
+    if(!text || text.length>C.MAX_TEXT){announce('paste too large to preserve · keep a separate copy',true);return;}
     finishPaste('Another paste started before verification finished. Compare the earlier original manually.');
     flush();lastField=el;pasteIssues.delete(el);
     if (!editorType(el) && el.maxLength>=0 && C.pasteCapacity(el.value,el.selectionStart || 0,el.selectionEnd || 0,text,el.maxLength).oversized) {
@@ -359,7 +359,7 @@
   document.addEventListener('submit',e=>{
     if(!e.isTrusted || !active)return;
     const over=fields().filter(f=>f.el.form===e.target).filter(f=>{const h=hintFor(f.el);return h && (h.unit==='words' ? W.countWords(textOf(f.el)) : textOf(f.el).length)>h.limit;});
-    if(over.length)announce('website counter limit may be exceeded Â· submission was not blocked',true);
+    if(over.length)announce('website counter limit may be exceeded · submission was not blocked',true);
   },true);
   chrome.runtime.onMessage.addListener((m,sender,respond)=>{
     if(sender.id===chrome.runtime.id && m.type==='OPEN_LIBRARY'){

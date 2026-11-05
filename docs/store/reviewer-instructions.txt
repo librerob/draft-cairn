@@ -1,4 +1,4 @@
-Draft Cairn 0.3.1 preview — synthetic reviewer test instructions
+Draft Cairn 0.4.0 preview — synthetic reviewer test instructions
 
 No account, payment, reviewer credentials, remote service, or client data is needed.
 
@@ -13,7 +13,7 @@ Source and local demo: https://github.com/librerob/draft-cairn
 8. Recovery uses oldest-first eviction at 180 records or the byte budget, with a visible notice; library answers are never automatically removed.
 9. Sites & settings controls retention (one day by default on fresh installs; existing choices are preserved), disabling protection, deleting site data, and deleting all extension data.
 
-Supported fields are standard top-level textareas, long ordinary text inputs, and targeted top-level Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots. Rich-text recovery is plain text and copy back only. Password/payment/OTP/hidden and sensitive-hint fields, generic contenteditable, frames, shadow roots and incognito are excluded. See docs/portal-matrix.md for the exact tested samples. Filtering cannot identify every sensitive answer. Text that has not finished saving can be lost. Persisted records/settings use AES-256-GCM with an automatic non-extractable key in this browser profile. An optional passphrase vault is available; the default automatic mode uses a same-profile key. A compromised live browser/device can still expose answers. No analytics, external answer transmission, remotely hosted code, or paid features are present.
+Supported fields are standard textareas, long ordinary text inputs, and targeted Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots. Rich-text recovery is plain text and copy back only. Password/payment/OTP/hidden and sensitive-hint fields, generic contenteditable, closed shadow roots, opaque frames and incognito are excluded. See docs/portal-matrix.md for the exact tested samples. Filtering cannot identify every sensitive answer. Text that has not finished saving can be lost. Persisted records/settings use AES-256-GCM with an automatic non-extractable key in this browser profile. An optional passphrase vault is available; the default automatic mode uses a same-profile key. A compromised live browser/device can still expose answers. No analytics, external answer transmission, remotely hosted code, or paid features are present.
 
 0.2 vault/privacy checks (synthetic data only):
 - Fresh installs use one-day recovery and omit page titles/field details. Enable page details in Sites & settings before testing direct restoration; otherwise copy-only is expected.
@@ -25,3 +25,11 @@ Supported fields are standard top-level textareas, long ordinary text inputs, an
 
 
 Appearance: in Sites & settings choose System, Light or Dark. System follows OS/browser preference changes. Explicit choices override that preference and apply to the popup and on-page editor too. Appearance remains changeable while the vault is locked.
+
+0.4.0 workflow checks:
+- The popup's Try a sample recovery opens a packaged local practice page; save synthetic text, reload, recover. No host access is granted by this exercise.
+- In an enabled ordinary field, open the on-page editor and choose Use library answer, or use Alt+Shift+L. Choose a saved answer, inspect its fit/result, then explicitly insert. Existing text outside the saved selection stays. Changed destinations cancel. Rich editors offer copying only.
+- Open shadow-root fields and authorized HTTP/HTTPS frame fields support copy-only recovery. A frame needs both its own origin and the containing page origin enabled. Closed roots and opaque/about:blank/srcdoc frames are unsupported.
+- Website-associated explicit word/character counters are advisory hints; submission and server acceptance are never certified.
+- Site-specific retention and reviewed multi-site grants are in Sites & settings. Optional managed policy restricts origins/maximum retention without granting Chrome access.
+- Select saved revisions to export a readable Markdown application snapshot. This is not an automatic full-form capture or a submission receipt.
