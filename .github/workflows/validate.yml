@@ -62,4 +62,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="$(node -p "require('./extension/manifest.json').version")"
-          gh release create "v$version" "dist/draft-cairn-$version.zip" "dist/draft-cairn-store-kit-$version.zip" dist/SHA256SUMS --target "$GITHUB_SHA" --prerelease --title "Draft Cairn $version Â· preview" --notes-file docs/release-notes.md
+          gh release create "v$version" "dist/draft-cairn-$version.zip" "dist/draft-cairn-store-kit-$version.zip" dist/SHA256SUMS --target "$GITHUB_SHA" --prerelease --title "Draft Cairn $version - preview" --notes-file docs/release-notes.md
