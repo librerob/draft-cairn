@@ -2,7 +2,7 @@
   if (globalThis.__draftCairn) return;
   globalThis.__draftCairn = true;
   const C = globalThis.Cairn,W=globalThis.CairnWorkflows;
-  let frameScope='';
+  let frameScope='',fallbackShortcut=false;
   const embedded=window!==window.top;
   let active = false;
   let activation = 0;
@@ -57,7 +57,7 @@
     return false;
   }
   function deactivate(){activation++;active=false;pending=null;clearTimeout(timer);clearTimeout(pasteWatch?.timer);pasteWatch=null;pasteIssues.clear();root?.replaceChildren();host?.remove();host=null;root=null;status=null;}
-  function configure(data){if(!data.active){deactivate();return false;}active=true;frameScope=data.scope || '';ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();checkedFields=new WeakMap();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;return true;}
+  function configure(data){if(!data.active){deactivate();return false;}active=true;fallbackShortcut=data.shortcut==='Alt+Shift+L';frameScope=data.scope || '';ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();checkedFields=new WeakMap();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;return true;}
   const shorten = s => (s || '').trim().replace(/\s+/g,' ').slice(0,200);
   const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))), b=>b.toString(16).padStart(2,'0')).join('');
   function describe(el) {
@@ -368,9 +368,20 @@
     const over=fields().filter(f=>f.el.form===e.target).filter(f=>{const h=hintFor(f.el);return h && (h.unit==='words' ? W.countWords(textOf(f.el)) : textOf(f.el).length)>h.limit;});
     if(over.length)announce('website counter limit may be exceeded · submission was not blocked',true);
   },true);
+  function openFocusedLibrary(){
+    const el=fieldFrom(activeElement());
+    if(!active || !document.hasFocus() || !el?.isConnected || !C.allowedField(describe(el)) || root?.querySelector('dialog'))return;
+    lastField=el;editor(el,textOf(el),false);
+    const button=Array.from(root.querySelectorAll('button')).find(b=>b.textContent==='Use library answer');button?.dispatchEvent(new Event('cairn-library'));
+  }
+  // Some Chromium environments pass the chord to the page instead of the command
+  // service. Both entry points open the same picker; neither inserts automatically.
+  document.addEventListener('keydown',e=>{
+    if(e.isTrusted && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.code==='KeyL' && fallbackShortcut && active && fieldFrom(activeElement())){e.preventDefault();openFocusedLibrary();}
+  },true);
   chrome.runtime.onMessage.addListener((m,sender,respond)=>{
     if(sender.id===chrome.runtime.id && m.type==='OPEN_LIBRARY'){
-      if(active && document.hasFocus() && lastField?.isConnected && C.allowedField(describe(lastField))){editor(lastField,textOf(lastField),false);root.querySelector('dialog button')?.focus();const button=Array.from(root.querySelectorAll('button')).find(b=>b.textContent==='Use library answer');button?.dispatchEvent(new Event('cairn-library'));}
+      openFocusedLibrary();
       respond({ok:true});return;
     }
     if (sender.id === chrome.runtime.id && m.type === 'RECHECK') {

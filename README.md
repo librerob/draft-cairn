@@ -115,6 +115,9 @@ Plain JavaScript, HTML, and CSS keep review and maintenance straightforward. The
 
 Restoration uses a hashed page path, a stable field descriptor, and the ordered form structure. Duplicate or missing identities refuse restoration. Pages with query strings or fragments support copying only. This conservatism reduces wrong-field restoration; it cannot prove that a website has kept the same meaning for an identifier. Always check restored text before submitting.
 
+- [Ten-tester pilot kit](docs/tester-kit.md) — invitation, synthetic tasks and grant-portal worksheet.
+- [Organization policy](docs/managed-policy.md) — optional origin restrictions and retention caps.
+- [Edge handoff](docs/edge-handoff.md) — prepared instructions; native Edge testing and submission remain pending.
 - [Commercial validation](docs/commercial-validation.md) — first users, alternatives, and decision criteria.
 - [Costs](docs/costs.md) — current requirements, no recurring infrastructure, future cost categories.
 - [Store listing and submission checklist](docs/chrome-web-store.md).

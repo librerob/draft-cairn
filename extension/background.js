@@ -80,7 +80,7 @@ async function handle(m,sender) {
     const {origin,state,url,policy,scope}=context;
     if(m.type==='LIBRARY_LIST'){const view=await S.load();return view.library.map(({id,title,project})=>({id,title,project}));}
     if(m.type==='LIBRARY_GET'){const view=await S.load(),answer=view.library.find(a=>a.id===m.id);if(!answer)throw new Error('Choose an existing library answer.');return {text:answer.text,title:answer.title};}
-    if(m.type==='HELLO')return {active:true,scope,appearance:state.appearance,ignoredFields:state.ignoredFields.filter(f=>f.origin===origin).map(f=>f.id)};
+    if(m.type==='HELLO')return {active:true,scope,shortcut:(await chrome.commands.getAll()).find(c=>c.name==='open-library')?.shortcut || '',appearance:state.appearance,ignoredFields:state.ignoredFields.filter(f=>f.origin===origin).map(f=>f.id)};
     if(!['CAPTURE','IGNORE_FIELD'].includes(m.type))throw new Error('Unavailable from this page.');
     const f=m.field;validateField(f);
     const pageKey=await digest(origin+url.pathname+scope),fieldKey=await digest(origin+pageKey+C.fieldIdentity(f));
