@@ -1,7 +1,9 @@
 (() => {
   if (globalThis.__draftCairn) return;
   globalThis.__draftCairn = true;
-  const C = globalThis.Cairn;
+  const C = globalThis.Cairn,W=globalThis.CairnWorkflows;
+  let frameScope='',fallbackShortcut=false;
+  const embedded=window!==window.top;
   let active = false;
   let activation = 0;
   let timer;
@@ -21,37 +23,72 @@
     return 'tinymce-inline';
   }
   function fieldFrom(target) {
-    if(!(target instanceof Element) || target.getRootNode()!==document)return null;
+    if(!(target instanceof Element))return null;
+    const tree=target.getRootNode();if(tree!==document && (!(tree instanceof ShadowRoot) || tree.mode!=='open'))return null;
     if(target.matches('textarea,input'))return target;
     const el=target.closest('[contenteditable]');
     return el && editorType(el) ? el : null;
   }
+  function parentOf(el){return el.parentElement || (el.getRootNode() instanceof ShadowRoot ? el.getRootNode().host : null);}
+  function across(el,selector){for(let node=el;node;node=parentOf(node))if(node.matches(selector))return node;return null;}
+  function activeElement(){let el=document.activeElement;while(el?.shadowRoot?.activeElement)el=el.shadowRoot.activeElement;return el;}
+  function eventField(e){return fieldFrom(e.composedPath()[0]);}
+  function shadowPath(el){
+    const parts=[];let tree=el.getRootNode();
+    while(tree instanceof ShadowRoot){const h=tree.host;parts.unshift(h.tagName+':'+h.id+':'+Array.from(h.parentNode?.children || []).indexOf(h));tree=h.getRootNode();}
+    return parts.join('/').slice(0,160);
+  }
+  function allFields(tree=document){
+    const found=[];
+    for(const el of tree.querySelectorAll('*')){
+      if(el===host)continue;
+      if(el.matches('textarea,input,'+richSelector))found.push(el);
+      if(el.shadowRoot)found.push(...allFields(el.shadowRoot));
+    }
+    return found;
+  }
   const textOf = el => editorType(el) ? el.innerText : el.value;
   async function excludedField(el) {
     const identity=C.fieldIdentity(describe(el));
-    const pageKey=await digest(location.origin+location.pathname);
+    const pageKey=await digest(location.origin+location.pathname+frameScope);
     const id=await digest(location.origin+pageKey+identity);
     checkedFields.set(el,identity);
     if(ignoredFields.has(id)){excluded.add(el);return true;}
     return false;
   }
-  function configure(data){ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();checkedFields=new WeakMap();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;}
+  function deactivate(){activation++;active=false;pending=null;clearTimeout(timer);clearTimeout(pasteWatch?.timer);pasteWatch=null;pasteIssues.clear();root?.replaceChildren();host?.remove();host=null;root=null;status=null;}
+  function configure(data){if(!data.active){deactivate();return false;}active=true;fallbackShortcut=data.shortcut==='Alt+Shift+L';frameScope=data.scope || '';ignoredFields=new Set(data.ignoredFields || []);excluded=new WeakSet();checkedFields=new WeakMap();appearance=['light','dark'].includes(data.appearance) ? data.appearance : 'system';if(host)host.dataset.theme=appearance;return true;}
   const shorten = s => (s || '').trim().replace(/\s+/g,' ').slice(0,200);
   const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))), b=>b.toString(16).padStart(2,'0')).join('');
   function describe(el) {
     const rich=editorType(el), form=el.form || el.closest('form');
     return {tag:el.tagName, type:rich || el.type || 'textarea', id:shorten(el.id), name:shorten(el.getAttribute('name')),
-      label:shorten(el.labels?.[0]?.textContent || el.getAttribute('aria-label') || (el.getAttribute('aria-labelledby') || '').split(/\s+/).slice(0,8).map(id=>document.getElementById(id)?.textContent || '').join(' ')),
-      form:shorten(form?.id || form?.getAttribute('name') || ''),
+      label:shorten(el.labels?.[0]?.textContent || el.getAttribute('aria-label') || (el.getAttribute('aria-labelledby') || '').split(/\s+/).slice(0,8).map(id=>el.getRootNode().getElementById(id)?.textContent || '').join(' ')),
+      form:shorten((form?.id || form?.getAttribute('name') || '')+(shadowPath(el) ? '|shadow|'+shadowPath(el) : '')),shadow:el.getRootNode()!==document,
       placeholder:shorten(el.getAttribute('placeholder') || el.getAttribute('data-placeholder')), autocomplete:shorten(el.getAttribute('autocomplete') || form?.getAttribute('autocomplete')),
       visible:Array.from(el.getClientRects()).some(r=>r.width>0 && r.height>0) &&
         (el.checkVisibility ? el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}) : getComputedStyle(el).visibility !== 'hidden') &&
-        !el.closest('[inert],[aria-hidden="true"],[hidden]'),
-      disabled:!!el.disabled || el.matches(':disabled') || !!el.closest('[aria-disabled="true"]'), readOnly:!!el.readOnly || !!el.closest('[aria-readonly="true"]') || !!rich && !el.isContentEditable,
-      private:excluded.has(el) || !!el.closest('[data-cairn-ignore]') || !!rich && !!el.querySelector('[data-cairn-ignore],input,textarea,[autocomplete]'), maxLength:rich ? -1 : el.maxLength};
+        !across(el,'[inert],[aria-hidden="true"],[hidden]') && !framePrivate(),
+      disabled:!!el.disabled || el.matches(':disabled') || !!across(el,'[aria-disabled="true"]'), readOnly:!!el.readOnly || !!across(el,'[aria-readonly="true"]') || !!rich && !el.isContentEditable,
+      private:excluded.has(el) || !!across(el,'[data-cairn-ignore]') || !!rich && !!el.querySelector('[data-cairn-ignore],input,textarea,[autocomplete]'), maxLength:rich ? -1 : el.maxLength};
+  }
+  function framePrivate(){
+    try {for(let w=window;w!==w.top;w=w.parent){const frame=w.frameElement;if(frame && (across(frame,'[data-cairn-ignore],[hidden],[inert],[aria-hidden="true"]') || !frame.checkVisibility({checkVisibilityCSS:true})))return true;}}
+    catch { /* Cross-origin parents are authorized independently by the worker. */ }
+    return false;
+  }
+  function hintFor(el){
+    const tree=el.getRootNode(),ids=(el.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    const candidates=ids.map(id=>tree.getElementById(id));
+    // An adjacent counter is accepted only in a container with exactly this one field.
+    const parent=el.parentElement;
+    if(parent && parent.querySelectorAll('textarea,input,[contenteditable="true"]').length===1)candidates.push(...parent.querySelectorAll('[role="status"],output,[data-word-count],[data-character-count]'));
+    const hints=candidates.filter(n=>n && n!==el && n.checkVisibility({checkVisibilityCSS:true})).map(n=>W.counterHint(n.textContent)).filter(Boolean);
+    const unique=[...new Map(hints.map(h=>[h.limit+'|'+h.unit,h])).values()];
+    return unique.length===1 ? unique[0] : null;
   }
   function fields() {
-    return Array.from(document.querySelectorAll('textarea,input,'+richSelector)).map(el=>({el,...describe(el)})).filter(C.allowedField);
+    return allFields().map(el=>({el,...describe(el)})).filter(C.allowedField);
   }
   async function signature(list) { return digest(JSON.stringify(list.map(C.fieldIdentity))); }
   async function message(m) {
@@ -67,12 +104,12 @@
     style.textContent = `:host{all:initial;color-scheme:light;--c-paper:#fff;--c-input:#f0f4f1;--c-ink:#1a211d;--c-muted:#505d55;--c-line:#748279;--c-primary:#226b4c;--c-on-primary:#fff;--c-error:#ffdad5;--c-on-error:#6e1712;--c-scrim:#101c1673;font:14px/1.6 'Segoe UI',Roboto,Arial,sans-serif;color:var(--c-ink)}
 :host([data-theme=dark]){color-scheme:dark;--c-paper:#1a211c;--c-input:#202923;--c-ink:#e1e9e2;--c-muted:#b2c0b5;--c-line:#85978a;--c-primary:#97d5b0;--c-on-primary:#093922;--c-error:#62302a;--c-on-error:#ffdad5;--c-scrim:#0009}
 @media(prefers-color-scheme:dark){:host(:not([data-theme=light]):not([data-theme=dark])){color-scheme:dark;--c-paper:#1a211c;--c-input:#202923;--c-ink:#e1e9e2;--c-muted:#b2c0b5;--c-line:#85978a;--c-primary:#97d5b0;--c-on-primary:#093922;--c-error:#62302a;--c-on-error:#ffdad5;--c-scrim:#0009}}
-*{box-sizing:border-box}button,textarea{font:inherit}button{min-height:40px;padding:9px 16px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-primary);border-radius:999px;cursor:pointer;font-size:13px;font-weight:600}button:hover{background:var(--c-input)}button:focus-visible,textarea:focus-visible{outline:3px solid var(--c-primary);outline-offset:3px}.pill{position:fixed;bottom:16px;right:16px;z-index:2147483647;background:var(--c-paper);color:var(--c-primary);border:1px solid var(--c-line);box-shadow:0 3px 16px #0002;border-radius:999px;padding:10px 16px;max-width:min(380px,90vw);text-align:left;font-size:12px;font-weight:500}.error{background:var(--c-error);color:var(--c-on-error)}dialog{color:var(--c-ink);background:var(--c-paper);border:1px solid var(--c-line);border-radius:24px;padding:24px;width:min(700px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 70px #0004}dialog::backdrop{background:var(--c-scrim)}h2{font-size:22px;line-height:1.35;font-weight:500;margin:0 0 12px}textarea{display:block;width:100%;height:38vh;min-height:160px;resize:vertical;padding:14px;background:var(--c-input);color:var(--c-ink);border:1px solid var(--c-line);border-radius:12px;line-height:1.65}label{display:block;font-weight:600;margin-bottom:8px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.primary{background:var(--c-primary);color:var(--c-on-primary)}.primary:hover{background:var(--c-primary)}p{margin:10px 0}small{display:block;color:var(--c-muted)}@media(forced-colors:active){.pill,.primary,dialog{border:1px solid ButtonText}}`;
+*{box-sizing:border-box}button,textarea,input{font:inherit}input[type=search]{display:block;width:100%;padding:12px;border-radius:12px;border:1px solid var(--c-line);background:var(--c-input);color:var(--c-ink)}section[data-library]{border-top:1px solid var(--c-line);margin-top:20px;padding-top:20px}button{min-height:40px;padding:9px 16px;border:1px solid var(--c-line);background:var(--c-paper);color:var(--c-primary);border-radius:999px;cursor:pointer;font-size:13px;font-weight:600}button:hover{background:var(--c-input)}button:disabled{opacity:.6;cursor:default}button:focus-visible,textarea:focus-visible{outline:3px solid var(--c-primary);outline-offset:3px}.pill{position:fixed;bottom:16px;right:16px;z-index:2147483647;background:var(--c-paper);color:var(--c-primary);border:1px solid var(--c-line);box-shadow:0 3px 16px #0002;border-radius:999px;padding:10px 16px;max-width:min(380px,90vw);text-align:left;font-size:12px;font-weight:500}.error{background:var(--c-error);color:var(--c-on-error)}dialog{color:var(--c-ink);background:var(--c-paper);border:1px solid var(--c-line);border-radius:24px;padding:24px;width:min(700px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 70px #0004}dialog::backdrop{background:var(--c-scrim)}h2{font-size:22px;line-height:1.35;font-weight:500;margin:0 0 12px}textarea{display:block;width:100%;height:38vh;min-height:160px;resize:vertical;padding:14px;background:var(--c-input);color:var(--c-ink);border:1px solid var(--c-line);border-radius:12px;line-height:1.65}label{display:block;font-weight:600;margin-bottom:8px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.primary{background:var(--c-primary);color:var(--c-on-primary)}.primary:hover{background:var(--c-primary)}p{margin:10px 0}small{display:block;color:var(--c-muted)}@media(forced-colors:active){.pill,.primary,dialog{border:1px solid ButtonText}}`;
     root.append(style);
     status = document.createElement('button');
     status.className = 'pill'; status.type = 'button'; status.setAttribute('aria-live','polite');
-    status.title = 'Open a larger editor for the last supported field';
-    status.onclick = ()=>{if(lastField?.isConnected && C.allowedField(describe(lastField))) {const issue=pasteIssues.get(lastField);editor(lastField,issue?.original ?? textOf(lastField),false,issue);}};
+    status.title = 'Open the editor or choose a library answer for this field (Alt+Shift+L)';
+    status.onclick = e=>{if(e.isTrusted && lastField?.isConnected && C.allowedField(describe(lastField))) {const issue=pasteIssues.get(lastField);editor(lastField,issue?.original ?? textOf(lastField),false,issue);}};
     status.textContent = 'Draft Cairn · choose a supported answer field';
     root.append(status);
     document.documentElement.append(host);
@@ -83,8 +120,8 @@
   async function focusedStatus() {
     if (!active) return;
     const version=++focusVersion;
-    const focused=document.activeElement,el=fieldFrom(focused);
-    if (focused===host) return;
+    const focused=activeElement(),el=fieldFrom(focused);
+    if (focused===host || embedded && !document.hasFocus()) return;
     if (el && C.allowedField(describe(el))) {
       if(ignoredFields.size) {
         announce('checking field…');
@@ -98,6 +135,7 @@
       if(pasteWatch?.el===el){announce('checking visible paste…');return;}
       const saved=fieldStatus.get(el);
       announce(saved?.text || (editorType(el) ? 'rich text · plain-text recovery · not saved yet' : 'supported field · not saved yet'),saved?.error || false);
+      const hint=hintFor(el);if(hint){const report=W.fit(textOf(el),el.maxLength,hint);status.textContent+=' · '+report.message;}
     } else {
       lastField=null;
       const editable=focused?.matches?.('textarea,input,iframe,[contenteditable]:not([contenteditable="false"]),[role="textbox"]') || focused?.isContentEditable || focused?.shadowRoot?.activeElement;
@@ -143,7 +181,8 @@
   function editor(el, original, oversized, issue) {
     mount();
     if (root.querySelector('dialog')) return;
-    const before = document.activeElement;
+    const before = activeElement();
+    const destination={url:location.href,value:textOf(el),start:el.selectionStart,end:el.selectionEnd,identity:C.fieldIdentity(describe(el))};
     const dialog = document.createElement('dialog');
     dialog.setAttribute('aria-labelledby','cairn-heading');
     const heading = document.createElement('h2'); heading.id = 'cairn-heading';
@@ -156,8 +195,7 @@
     const help = document.createElement('small'); help.textContent = 'Counts use UTF-16 units, as HTML maxlength does. Custom website limits may differ. Emoji can use several units. Edits here are kept in memory until copied.';
     const result = document.createElement('p'); result.setAttribute('role','status');
     function count() {
-      const limit = el.maxLength;
-      counter.textContent = `${area.value.length.toLocaleString()} units · ${Array.from(area.value).length.toLocaleString()} Unicode code points${limit >= 0 ? ` · declared field limit ${limit}` : ' · no detectable limit'}`;
+      counter.textContent=W.fit(area.value,el.maxLength,hintFor(el)).message;
     }
     area.oninput = count; count();
     const actions = document.createElement('div'); actions.className = 'actions';
@@ -170,7 +208,10 @@
       try{await message({type:'IGNORE_FIELD',field:describe(el)});excluded.add(el);pasteIssues.delete(el);if(pasteWatch?.el===el){clearTimeout(pasteWatch.timer);pasteWatch=null;}if(pending?.el===el)pending=null;dialog.close();lastField=null;announce('not protected in this field · excluded in settings',true);}
       catch{result.textContent='Could not exclude this field. Turn protection off from the toolbar popup.';}
     };
-    actions.append(copy,close,ignore); dialog.append(heading,note,label,area,counter,help,actions,result);
+    const library=document.createElement('button');library.type='button';library.textContent='Use library answer';
+    library.onclick=e=>{if(e.isTrusted)openLibrary(dialog,el,destination,area,counter,result);};
+    library.addEventListener('cairn-library',()=>openLibrary(dialog,el,destination,area,counter,result));
+    actions.append(copy,library,close,ignore); dialog.append(heading,note,label,area,counter,help,actions,result);
     if(issue) {
       area.style.height='120px';area.style.minHeight='120px';
       help.textContent='Edits here stay in memory until copied. Review the website before pasting. Formatting is not compared.';
@@ -182,6 +223,62 @@
     }
     dialog.addEventListener('close',()=>{dialog.remove();if(before?.isConnected)before.focus();});
     root.append(dialog); dialog.showModal(); area.focus();
+  }
+  async function openLibrary(dialog,el,destination,area,counter,result){
+    if(dialog.querySelector('[data-library]'))return;
+    const section=document.createElement('section');section.dataset.library='';
+    const label=document.createElement('label');label.textContent='Find a library answer';label.htmlFor='cairn-library-search';
+    const search=document.createElement('input');search.type='search';search.id='cairn-library-search';search.placeholder='Search titles and projects';
+    const options=document.createElement('div');options.className='actions';
+    const fit=document.createElement('p');fit.setAttribute('role','status');
+    const insert=document.createElement('button');insert.type='button';insert.className='primary';insert.textContent='Insert at saved cursor';insert.disabled=true;
+    const note=document.createElement('p');note.textContent='Choose an answer to preview below. Existing text outside your selection stays. Rich editors support copying only. Inserting makes the text available to this website.';
+    const preview=document.createElement('textarea');preview.readOnly=true;preview.setAttribute('aria-label','Result after insertion');preview.style.height='120px';
+    const controls=dialog.querySelector('.actions'),answerLabel=dialog.querySelector('label[for="cairn-answer"]');
+    dialog.querySelector('h2').textContent='Use a library answer';
+    dialog.querySelector('p').textContent='Choose a saved paragraph, review its fit and result, then insert when ready.';
+    dialog.querySelector('small')?.remove();
+    answerLabel.textContent='Selected answer (editable copy)';area.style.height='120px';area.style.minHeight='120px';area.value='';counter.textContent='';
+    for(const button of controls.querySelectorAll('button'))if(['Use library answer','Never capture this field'].includes(button.textContent))button.hidden=true;
+    section.append(label,search,options,answerLabel,area,counter,note,fit,preview,insert);dialog.insertBefore(section,controls);search.focus();
+    let selected=false;
+    function update(){
+      const expected=C.expectedPaste(destination.value,destination.start,destination.end,area.value);
+      const report=W.fit(expected ?? area.value,el.maxLength,hintFor(el));
+      preview.value=expected ?? '';fit.textContent=report.message+(destination.start!==destination.end ? ' · selected website text will be replaced' : '');
+      insert.disabled=!selected || report.blocked || expected===null || !!editorType(el);
+    }
+    area.addEventListener('input',update);
+    try{
+      const items=await message({type:'LIBRARY_LIST'});
+      function render(){
+        options.replaceChildren();
+        const matches=items.filter(a=>(a.title+' '+a.project).toLowerCase().includes(search.value.toLowerCase()));
+        if(!matches.length)options.textContent='No matching library answers. Save an answer in Recovery & library first.';
+        for(const item of matches.slice(0,30)){
+          const choice=document.createElement('button');choice.type='button';choice.textContent=item.title+(item.project ? ' · '+item.project : '');
+          choice.onclick=async e=>{if(!e.isTrusted)return;try{const answer=await message({type:'LIBRARY_GET',id:item.id});if(!dialog.isConnected || !active)return;area.value=answer.text;selected=true;counter.textContent=W.fit(area.value,el.maxLength,hintFor(el)).message;update();}catch{fit.textContent='Unlock your vault in the workspace before using library answers.';}};
+          options.append(choice);
+        }
+      }
+      search.oninput=render;render();
+    }catch{fit.textContent='Unlock your vault in the workspace before using library answers.';}
+    insert.onclick=async e=>{
+      if(!e.isTrusted || insert.disabled)return;insert.disabled=true;
+      try{
+        if(!(await message({type:'HELLO'})).active)throw new Error(); // Recheck access immediately before releasing text.
+        if(await excludedField(el) || !active || !el.isConnected || !C.allowedField(describe(el)) || editorType(el) || location.href!==destination.url || C.fieldIdentity(describe(el))!==destination.identity || el.value!==destination.value)throw new Error();
+        const expected=C.expectedPaste(destination.value,destination.start,destination.end,area.value);
+        if(expected===null || W.fit(expected,el.maxLength,hintFor(el)).blocked)throw new Error();
+        const proto=el.tagName==='TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(proto,'value').set.call(el,expected);
+        el.dispatchEvent(new Event('input',{bubbles:true,composed:true}));el.dispatchEvent(new Event('change',{bubbles:true,composed:true}));
+        fit.textContent='Inserted · checking what the website retained…';
+        await new Promise(resolve=>setTimeout(resolve,1500));
+        if(!active || !el.isConnected || el.value!==expected){fit.textContent='The website changed or removed the inserted text. Your library original is unchanged. Review and copy it manually.';return;}
+        const saved=await enqueue(el,expected);fit.textContent='Visible insertion matches · '+(saved ? 'saved on this device' : 'not saved; keep a separate copy')+' · submission not checked';
+      }catch{fit.textContent='The destination changed or protection is unavailable. Reopen the editor to choose the field again.';}
+    };
   }
   function preservePaste(watch,note,actual,comparison) {
     if(!active || watch.version!==activation)return;
@@ -220,7 +317,7 @@
   window.addEventListener('blur',()=>setTimeout(focusedStatus,0));
   document.addEventListener('input',e=>{
     if (!e.isTrusted) return;
-    const el = fieldFrom(e.target);
+    const el = eventField(e);
     if (!active || !el || !C.allowedField(describe(el))) return;
     if(pasteWatch && (pasteWatch.el!==el || e.inputType!=='insertFromPaste'))finishPaste('Typing continued before the paste check finished. Compare the original manually.');
     if (pending && pending.el !== el) flush();
@@ -232,7 +329,7 @@
   const richEdits=new WeakMap();
   document.addEventListener('beforeinput',e=>{
     if(!e.isTrusted || !active || !/^(insert|delete|historyUndo|historyRedo)/.test(e.inputType))return;
-    const el=fieldFrom(e.target);
+    const el=eventField(e);
     if(!el || !editorType(el) || !C.allowedField(describe(el)))return;
     if(pasteWatch && (pasteWatch.el!==el || e.inputType!=='insertFromPaste'))finishPaste('Typing continued before the paste check finished. Compare the original manually.');
     const version=activation,edit={};richEdits.set(el,edit);
@@ -247,7 +344,7 @@
   window.addEventListener('pagehide',()=>{finishPaste('The page closed before verification finished. Compare the original manually.');flush();});
   document.addEventListener('paste',e=>{
     if (!e.isTrusted) return;
-    const el=fieldFrom(e.target);
+    const el=eventField(e);
     if (!active || !el || !C.allowedField(describe(el)) || !e.clipboardData || !e.clipboardData.types.includes('text/plain')) return;
     if(ignoredFields.size && checkedFields.get(el)!==C.fieldIdentity(describe(el))){announce('paste check unavailable until field exclusion check finishes',true);return;}
     const text=e.clipboardData.getData('text/plain');
@@ -266,23 +363,43 @@
     const watch={el,original:text,expected,version:activation,snapshot:snapshot(el,text,'paste').catch(()=>null)};pasteWatch=watch;
     watch.timer=setTimeout(()=>finishPaste(),1500);focusedStatus();
   },true);
+  document.addEventListener('submit',e=>{
+    if(!e.isTrusted || !active)return;
+    const over=fields().filter(f=>f.el.form===e.target).filter(f=>{const h=hintFor(f.el);return h && (h.unit==='words' ? W.countWords(textOf(f.el)) : textOf(f.el).length)>h.limit;});
+    if(over.length)announce('website counter limit may be exceeded · submission was not blocked',true);
+  },true);
+  function openFocusedLibrary(){
+    const el=fieldFrom(activeElement());
+    if(!active || !document.hasFocus() || !el?.isConnected || !C.allowedField(describe(el)) || root?.querySelector('dialog'))return;
+    lastField=el;editor(el,textOf(el),false);
+    const button=Array.from(root.querySelectorAll('button')).find(b=>b.textContent==='Use library answer');button?.dispatchEvent(new Event('cairn-library'));
+  }
+  // Some Chromium environments pass the chord to the page instead of the command
+  // service. Both entry points open the same picker; neither inserts automatically.
+  document.addEventListener('keydown',e=>{
+    if(e.isTrusted && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.code==='KeyL' && fallbackShortcut && active && fieldFrom(activeElement())){e.preventDefault();openFocusedLibrary();}
+  },true);
   chrome.runtime.onMessage.addListener((m,sender,respond)=>{
+    if(sender.id===chrome.runtime.id && m.type==='OPEN_LIBRARY'){
+      openFocusedLibrary();
+      respond({ok:true});return;
+    }
     if (sender.id === chrome.runtime.id && m.type === 'RECHECK') {
       respond({ok:true});
       const version=activation;
-      message({type:'HELLO'}).then(data=>{if(version===activation){configure(data);active=true;focusedStatus();}}).catch(()=>{if(version===activation){active=false;pending=null;clearTimeout(timer);clearTimeout(pasteWatch?.timer);pasteWatch=null;pasteIssues.clear();host?.remove();}});return;
+      message({type:'HELLO'}).then(data=>{if(version===activation){if(!configure(data))return;focusedStatus();}}).catch(()=>{if(version===activation){deactivate();}});return;
     }
     if (sender.id === chrome.runtime.id && m.type === 'START') {
       const version=++activation;respond({ok:true});
-      message({type:'HELLO'}).then(data=>{if(version===activation){configure(data);active=true;focusedStatus();}}).catch(()=>{});return;
+      message({type:'HELLO'}).then(data=>{if(version===activation){if(!configure(data))return;focusedStatus();}}).catch(()=>{});return;
     }
-    if (sender.id === chrome.runtime.id && m.type === 'STOP') {activation++;active=false;pending=null;clearTimeout(timer);clearTimeout(pasteWatch?.timer);pasteWatch=null;pasteIssues.clear();host?.remove();respond({ok:true});return;}
+    if (sender.id === chrome.runtime.id && m.type === 'STOP') {deactivate();respond({ok:true});return;}
     if (sender.id !== chrome.runtime.id || m.type !== 'RESTORE') return;
     (async()=>{
-      if (!active) return {ok:false,error:'Protection is off. Copy the answer instead.'};
-      const list=fields(), structure=await signature(list), pageKey=await digest(location.origin+location.pathname);
+      if (!active || embedded) return {ok:false,error:'Protection is off. Copy the answer instead.'};
+      const list=fields(), structure=await signature(list), pageKey=await digest(location.origin+location.pathname+frameScope);
       const found=C.matchField(m.draft,list,pageKey,structure,!location.search && !location.hash);
-      if (!found || !found.el.isConnected || !C.allowedField(describe(found.el)) || await excludedField(found.el) || found.el.value !== '')
+      if (!found || !found.el.isConnected || !C.allowedField(describe(found.el)) || found.el.getRootNode()!==document || await excludedField(found.el) || found.el.value !== '')
         return {ok:false,error:'The page or field changed, the match is uncertain, or the field already has text. Copy the answer instead.'};
       if (found.el.maxLength >= 0 && m.draft.text.length > found.el.maxLength)
         return {ok:false,error:'The page limit changed. Copy the answer instead.'};
@@ -296,5 +413,5 @@
     return true;
   });
   const initialVersion=activation;
-  message({type:'HELLO'}).then(data=>{if(initialVersion!==activation)return;configure(data);active=true;if(document.documentElement)focusedStatus();else document.addEventListener('DOMContentLoaded',()=>{if(active)focusedStatus();},{once:true});}).catch(()=>{});
+  message({type:'HELLO'}).then(data=>{if(initialVersion!==activation)return;if(!configure(data))return;if(document.documentElement)focusedStatus();else document.addEventListener('DOMContentLoaded',()=>{if(active)focusedStatus();},{once:true});}).catch(()=>{});
 })();

@@ -1,6 +1,6 @@
 # Privacy policy
 
-Effective 23 October 2026 · Draft Cairn 0.3.0 preview
+Effective 5 November 2026 · Draft Cairn 0.4.0 preview
 
 Draft Cairn keeps supported field text only on websites you explicitly enable. It also keeps complete oversized, changed or unverified paste originals temporarily, and library answers you deliberately save or import. No account is required. Nothing is sent to the developer.
 
@@ -10,7 +10,7 @@ Recovery records contain answer text, the exact website origin (scheme, host and
 
 Raw URL paths, query strings, fragments, cookies and a general browsing-history log are not stored. Hashes are fingerprints, not guaranteed anonymization: someone who knows candidate pages or fields may guess them. Selected site origins are retained for capture and recovery. Arbitrary narrative answers can contain sensitive information even when credential fields are excluded.
 
-Library records contain title, answer text, optional project, local identifier and save time. They have no website association. Settings include selected and blocked origins, field exclusions, retention, metadata and session-storage choices, encryption mode, and appearance (system, light or dark). The extension does not use Chrome Sync.
+Library records contain title, answer text, optional project, local identifier and save time. They have no website association. Settings include selected and blocked origins, field exclusions, global/per-site retention, metadata and session-storage choices, encryption mode, and appearance (system, light or dark). The extension does not use Chrome Sync.
 
 ## Encryption choices
 
@@ -33,7 +33,7 @@ Copy writes to the system clipboard. Other apps, clipboard managers, Windows cli
 
 ## Capture exclusions
 
-Visible, editable standard long-answer fields and recognized top-level Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots qualify. Rich-text snapshots contain rendered plain text, not formatting or attachments, and support copy back only. Password, payment, one-time-code, hidden, read-only and other sensitive-hint fields are filtered. Sensitive autocomplete tokens are excluded; `autocomplete="off"` is allowed. Incognito, frames, generic contenteditable and shadow-root fields are unsupported. Filters are imperfect. Use only where you have authority to retain a local copy.
+Visible, editable standard long-answer fields and recognized Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots qualify. Rich-text snapshots contain rendered plain text, not formatting or attachments, and support copy back only. Password, payment, one-time-code, hidden, read-only and other sensitive-hint fields are filtered. Sensitive autocomplete tokens are excluded; `autocomplete="off"` is allowed. Eligible fields in open shadow roots and HTTP/HTTPS frames can save. Embedded frames require both their own origin and the containing website enabled; frame/shadow recovery is copy-only. Incognito, closed shadow roots, opaque/about:blank/srcdoc frames and generic contenteditable are unsupported. Filters are imperfect. Use only where you have authority to retain a local copy.
 
 Post-paste checks inspect the plain-text clipboard payload only during a trusted paste in a qualifying field. They compare visible text after 1.5 seconds, or keep an original for manual review when comparison is interrupted or a rich selection cannot be matched. Originals are encrypted under the selected storage mode. The page can hold at most four original/observed-text reviews in memory until dismissed, reload, protection off or close; vault locking does not erase text already present on a website or these page-memory copies. Visible matches do not prove server acceptance. No background clipboard history is collected.
 
@@ -41,7 +41,7 @@ You can block a site from the popup. A field can be excluded from the larger on-
 
 ## Retention and deletion
 
-New installations default to one day of recovery. Existing installations retain their choice. Options are 1, 3, 7, 14 or 30 days. Separate original-paste records expire within one hour. Expired records are excluded on reads and removed on successful writes, hourly cleanup or startup while Chrome runs. Closed-browser files may retain expired bytes until cleanup succeeds.
+New installations default to one day of recovery. Existing installations retain their choice. Options are 1, 3, 7, 14 or 30 days globally and per site. Organization-managed policy can restrict allowed origins and cap retention. Increasing retention does not extend earlier expiry or override storage budgets. Separate original-paste records expire within one hour. Expired records are excluded on reads and removed on successful writes, hourly cleanup or startup while Chrome runs. Closed-browser files may retain expired bytes until cleanup succeeds.
 
 Recovery is a rolling buffer: the oldest revisions can disappear earlier at the 180-record or 6 MiB total plaintext budget. Library capacity reserves space for recovery; library answers are never evicted. Evictions are shown in the UI.
 
@@ -54,3 +54,13 @@ Individual drafts, site drafts/access, library answers or all extension data can
 Handled data is used only for the disclosed answer-recovery, paste-protection and answer-library features. It is not sold, used for advertising or credit decisions, or made accessible to the developer. Use follows the Chrome Web Store User Data Policy, including Limited Use requirements.
 
 Use [GitHub issues](https://github.com/librerob/draft-cairn/issues) for general questions with synthetic examples only. Never post confidential answers. For vulnerabilities use the route in [SECURITY.md](SECURITY.md).
+
+## Optional workflow actions (0.4.0)
+
+The library picker sends saved titles/projects, and the selected answer, to the isolated content script only after the user opens it on an enabled page. Its closed-shadow editor is a convenience, not a security boundary against a compromised live website or browser. Explicit insertion exposes text to that website. Existing text outside the saved selection is preserved; changed destinations cancel insertion. Visible results are checked after 1.5 seconds without verifying server receipt.
+
+Counter hints read short visible field-associated counters on enabled pages. They are advisory; no counter contents or usage analytics are sent to the developer. The shortcut opens the same explicit picker and does not insert automatically.
+
+Application snapshot export writes selected saved answers to readable local Markdown, including question labels only where page details were saved. No automatic submission receipt is collected. It is not proof that an application was sent or accepted. The exported file is outside vault protection. The local practice page stores synthetic answer text in the ordinary encrypted recovery buffer, capped at one day, without enabling any website.
+
+Frame capture additionally uses a hashed containing-page/frame scope. Raw containing-page paths and queries are not stored. Exact origins and per-site retention settings remain operational metadata under the automatic profile key. Organization policy is read from Chrome managed storage. It supplies restrictions only; it does not grant access, enable a server, share answers, or upload usage.

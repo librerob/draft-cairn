@@ -1,5 +1,8 @@
 import './theme.js';
 import './core.js';
+import './workflows.js';
+const W=globalThis.CairnWorkflows;
+const selectedDrafts=new Set();
 import {encryptExport,decryptExport} from './crypto.js';
 import {$,node,api,notice,action,copy,time} from './ui.js';
 let state, tabs=[], pane='recovery', refreshVersion=0, securityGeneration=0, securityMode='', pendingImport='';
@@ -19,6 +22,7 @@ function renderDrafts() {
   if(!list.length)$('drafts').append(empty('No recovery drafts yet.',q ? 'No drafts match your search.' : 'Enable protection from the extension popup before you write. Supported answers will appear here after saving.'));
   for(const d of list.sort((a,b)=>b.saved-a.saved)) {
     const card=node('article',undefined,'card draft');
+    const selection=node('label'),check=node('input');check.type='checkbox';check.checked=selectedDrafts.has(d.id);check.onchange=()=>{if(check.checked)selectedDrafts.add(d.id);else selectedDrafts.delete(d.id);};selection.append(check,document.createTextNode(' Include in application snapshot'));card.append(selection);
     card.append(node('span',d.kind === 'paste' ? 'Original paste · up to 1 hour' : 'Recovery revision','badge'),node('h3',d.field.label || 'Untitled field'),node('div',d.title,'meta'),node('div',`${d.origin} · ${time(d.saved)}`,'meta'),node('pre',d.text));
     const controls=node('div',undefined,'row actions');
     controls.append(action('Copy',()=>copy(d.text),'primary'),action('Open editor',()=>openEditor(d.text,d.field.label || 'Recovered answer')),action('Delete',async()=>{if(confirm('Delete this revision?')){await api('DELETE_DRAFT',{id:d.id});await refresh();}},'quiet danger'));
@@ -50,6 +54,8 @@ function renderLibrary() {
   }
 }
 function renderSettings() {
+  $('policy-status').textContent=state.policy?.allowed!==null || state.policy?.maxDays<30 ? `Organization policy applies: maximum ${state.policy.maxDays} days; ${state.policy.allowed===null ? 'no site restriction' : 'only listed origins allowed'}. Chrome site permission is still required.` : 'No organization restrictions configured.';
+  for(const option of $('retention').options)option.disabled=Number(option.value)>state.policy.maxDays;
   $('retention').value=state.days;$('sites').replaceChildren();
   $('metadata').checked=state.metadata;$('session-only').checked=state.sessionOnly;
   $('metadata').disabled=state.locked && state.metadata;
@@ -58,7 +64,7 @@ function renderSettings() {
   $('lock-vault').hidden=!vault || state.locked;$('unlock-vault').hidden=!state.locked;
   $('vault-status').textContent=vault ? (state.locked ? 'Passphrase vault · locked' : 'Passphrase vault · unlocked for this session') : 'Automatic encryption · no password needed';
   $('vault-help').textContent=state.locked ? 'New drafts can still save. Unlock to read, search, restore or change library answers.' : vault ? 'Lock when you finish. Your clipboard, exported files and text on websites remain outside the vault.' : 'The automatic key is stored in this profile. Enable a passphrase vault in Sites & settings for protection of answer contents in a copied profile.';
-  for(const id of ['new-answer','export','export-encrypted','import','draft-search','library-search'])$(id).disabled=state.locked;
+  for(const id of ['snapshot','new-answer','export','export-encrypted','import','draft-search','library-search'])$(id).disabled=state.locked;
   $('blocked-sites').replaceChildren(node('h3','Blocked websites'));
   if(!state.blockedSites.length)$('blocked-sites').append(node('p','No blocked websites.','meta'));
   for(const origin of state.blockedSites){const row=node('div',undefined,'site');row.append(node('strong',origin),action('Remove block',async()=>{await api('UNBLOCK_SITE',{origin});await refresh();notice('Block removed. Enable protection from the site popup when ready.');}));$('blocked-sites').append(row);}
@@ -72,11 +78,17 @@ function renderSettings() {
     const controls=node('div',undefined,'row');
     if(state.sites.includes(origin))controls.append(action('Turn off',async()=>{await api('DISABLE',{origin});await refresh();notice('Protection is off. Existing drafts are kept.');}));
     controls.append(action('Delete site data',async()=>{if(confirm('Delete all drafts and protection settings for this site? Manually saved library answers remain.')){await api('DISABLE',{origin,erase:true});await refresh();notice('Site drafts and protection settings deleted.');}},'danger'));
+    if(state.sites.includes(origin)){
+      const label=node('label','Recovery retention for this site'),select=node('select');select.setAttribute('aria-label',`Retention for ${origin}`);
+      for(const days of W.DAYS){const option=node('option',`${days} ${days===1?'day':'days'}`);option.value=days;option.disabled=days>state.policy.maxDays;select.append(option);}
+      select.value=state.siteDays[origin] || state.days;select.onchange=async()=>{try{await api('RETENTION',{origin,days:Number(select.value)});await refresh();notice('Site retention updated. Existing expiry is only shortened, never extended.');}catch(e){notice(e.message,true);}};
+      row.append(label,select);
+    }
     row.append(controls);$('sites').append(row);
   }
 }
 function scrub() {
-  refreshVersion++;securityGeneration++;state=undefined;
+  refreshVersion++;securityGeneration++;state=undefined;selectedDrafts.clear();
   $('drafts').replaceChildren();$('answers').replaceChildren();
   $('draft-search').value='';$('library-search').value='';
   if($('answer-dialog').open)$('answer-dialog').close();$('answer-form').reset();
@@ -113,8 +125,8 @@ $('answer-form').onsubmit=async e=>{
 };
 $('retention').onchange=async()=>{try{await api('RETENTION',{days:Number($('retention').value)});await refresh();notice('Retention updated. Shorter expiry applies to existing drafts too.');}catch(e){notice(e.message,true);}};
 function libraryJSON(){return JSON.stringify({format:'draft-cairn-library',version:1,answers:state.library.map(({title,text,project})=>({title,text,project}))});}
-function download(raw,name){
-  const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));
+function download(raw,name,type='application/json'){
+  const url=URL.createObjectURL(new Blob([raw],{type}));
   const link=node('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 $('export').onclick=()=>{
@@ -199,3 +211,25 @@ chrome.storage.onChanged.addListener((changes,area)=>{
   if(area==='local' && changes['cairn-change'] || area==='session' && changes['cairn-vault-session'])refresh().catch(()=>notice('Could not refresh local data.',true));
 });
 refresh().catch(e=>notice(e.message,true));
+
+$('snapshot').onclick=async()=>{
+  try{
+    const current=await api('STATE');if(current.locked)throw new Error('Vault is locked. Unlock it before exporting.');
+    const drafts=current.drafts.filter(d=>selectedDrafts.has(d.id));
+    if(!drafts.length)throw new Error('Choose saved revisions using Include in application snapshot first.');
+    if(!confirm(`Export ${drafts.length} selected answers as readable Markdown? This file is outside vault protection and is not a submission receipt.`))return;
+    download(W.markdown(drafts,current.metadata),'draft-cairn-application-snapshot.md','text/markdown');notice('Selected saved answers exported. This does not prove submission.');
+  }catch(e){notice(e.message,true);}
+};
+$('enable-sites').onclick=async()=>{
+  const button=$('enable-sites');button.disabled=true;
+  try{
+    const origins=W.siteList($('site-origins').value);
+    if(origins.some(o=>state.blockedSites.includes(o) || state.policy.allowed!==null && !state.policy.allowed.includes(o)))throw new Error('Site is blocked or not allowed by your organization.');
+    const pending=chrome.storage.session.set({'enable-batch':{origins,created:Date.now()}});
+    const permission=chrome.permissions.request({origins:[...new Set(origins.map(Cairn.hostPattern))]});
+    await pending;const granted=await permission;
+    if(!granted){await chrome.storage.session.remove('enable-batch');throw new Error('Site access was not granted. Protection remains off.');}
+    await api('FINISH_ENABLE');await refresh();notice('Sites enabled. Reload their open pages before writing.');
+  }catch(e){notice(e.message,true);}finally{button.disabled=false;}
+};

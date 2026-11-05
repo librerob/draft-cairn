@@ -1,8 +1,8 @@
 # Final Chrome smoke test
 
-Status: **not yet performed on the unmodified 0.3.1 ZIP**. Automated Chromium tests use a test-only localhost host grant; they cannot stand in for these checks. Use only synthetic text. Stop submission if a required step fails.
+Status: **not yet performed on the unmodified 0.4.0 ZIP**. Automated Chromium tests use a test-only localhost host grant; they cannot stand in for these checks. Use only synthetic text. Stop submission if a required step fails.
 
-1. Extract `draft-cairn-0.3.1.zip` and load that extracted folder in a fresh supported Chrome profile via `chrome://extensions` → Developer mode → Load unpacked. Pin the extension. Do not change its manifest or permissions.
+1. Extract `draft-cairn-0.4.0.zip` and load that extracted folder in a fresh supported Chrome profile via `chrome://extensions` → Developer mode → Load unpacked. Pin the extension. Do not change its manifest or permissions.
 2. Run `node scripts/demo.mjs` from a source checkout and open `http://127.0.0.1:8765/index.html` in that Chrome profile. Before enabling protection, type a synthetic answer. Confirm no draft is captured.
 3. Open the popup and choose Enable for this site. Deny Chrome's native access request. Confirm protection stays off. Repeat and approve. If Chrome closes the popup, reopen it and confirm protection has finished enabling. Type a new synthetic answer in Project summary and wait for “saved on this device”.
 4. With default metadata minimization, reload and verify the answer is available to copy. For direct restoration, first enable page titles/field details in settings, create a fresh saved revision, then reload and restore it into the now-empty Project summary. Check it is exact. Put new text in the destination and confirm restoration refuses to overwrite it.
@@ -19,7 +19,7 @@ Record Chrome/OS version, date, pass/fail, and any issue using synthetic descrip
 
 On an enabled eligible field, paste a harmless synthetic paragraph and wait for the visible-paste check and completed save. Reload and verify the pasted answer, rather than just an earlier typing revision, is available in recovery. A matching visible value does not prove server submission. Compare the dated [public sample matrix](../portal-matrix.md) with the actual page configuration; a landing-page iframe is not a standalone form.
 
-On a targeted top-level rich editor, type and paste synthetic text, then verify plain-text recovery after reload. Recovery is copy back only. Check partial rich selections produce manual-review wording, excluded/read-only fields are not captured, and generic contenteditable/iframe editors say not protected. No formatting or attachment recovery is promised.
+On a targeted top-level rich editor, type and paste synthetic text, then verify plain-text recovery after reload. Recovery is copy back only. Check partial rich selections produce manual-review wording, excluded/read-only fields are not captured, and generic contenteditable and unauthorized iframe editors say not protected. No formatting or attachment recovery is promised.
 
 ## Optional vault and privacy controls
 
@@ -38,3 +38,16 @@ On a targeted top-level rich editor, type and paste synthetic text, then verify 
 - [ ] Switch the OS/browser between light and dark while System is selected; inspect workspace, popup and on-page editor.
 - [ ] Choose Light/Dark explicitly, reload/restart, and verify the override survives and synchronizes across open extension pages.
 - [ ] Check at increased text size, a narrow viewport, reduced motion and Windows High Contrast.
+
+## 0.4.0 workflow checks
+
+- [ ] Try a sample recovery: save synthetic text, reload, recover, delete practice drafts. Check vault-locked behavior.
+- [ ] Focus an ordinary field, open the on-page editor, choose Use library answer. Preview a short saved answer, insert explicitly, and verify unchanged text outside the selected range. Repeat with an oversized answer, a changed destination, a changed route and a website that clips text. Rich editors stay copy-only.
+- [ ] Configure/use Alt+Shift+L in Chrome shortcuts; check conflicts and focus in an embedded field.
+- [ ] Use an open shadow-root narrative field and verify capture/reload/copy recovery. Private ancestors and closed roots must not save. Direct restore remains unavailable.
+- [ ] Enable a containing site and a distinct embedded HTTP/HTTPS form origin through the reviewed batch. Capture must require both; deny/revoke each grant and verify stopping. Reload after enabling.
+- [ ] Verify a linked website word counter is advisory, shows the local estimate separately, and does not become a guessed limit for another field. Submission is not blocked or certified.
+- [ ] Choose per-site retention and confirm shorter expiry applies. A longer period does not extend existing records; storage eviction can happen earlier.
+- [ ] Select saved revisions and export a readable Markdown snapshot. Confirm only selected records and allowed labels appear, with the submission disclaimer. Protect the file separately.
+- [ ] On a managed pilot profile, exercise AllowedOrigins and MaxRetentionDays with native organization policy. Simulated CI is not native policy delivery evidence.
+- [ ] Run the [ten-tester pilot](../tester-kit.md) on authorized grant portals. Record access blockers and exact configurations without real answers.

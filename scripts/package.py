@@ -4,7 +4,7 @@ import hashlib, json, zipfile, re
 root=Path(__file__).resolve().parents[1]
 extension=root/'extension'
 version=json.loads((extension/'manifest.json').read_text())['version']
-files=['manifest.json','core.js','storage.js','legacy-storage.js','record-store.js','crypto.js','background.js','content.js','ui.js','theme.js','ui.css','popup.html','popup.js','workspace.html','workspace.js']+[f'icons/{n}.png' for n in [16,32,48,128]]
+files=['manifest.json','practice.html','practice.js','managed-schema.json','workflows.js','core.js','storage.js','legacy-storage.js','record-store.js','crypto.js','background.js','content.js','ui.js','theme.js','ui.css','popup.html','popup.js','workspace.html','workspace.js']+[f'icons/{n}.png' for n in [16,32,48,128]]
 actual=sorted(p.relative_to(extension).as_posix() for p in extension.rglob('*') if p.is_file())
 assert actual==sorted(files), 'Unexpected extension file. Review the release allowlist.'
 out=root/'dist'
@@ -30,8 +30,15 @@ kit_files={
     'listing/screenshot-library-dark-1280x800.png':(root/'docs/images/library-dark.png').read_bytes(),
     'listing/reviewer-instructions.txt':(root/'docs/store/reviewer-instructions.txt').read_bytes(),
     'listing/privacy-policy.md':(root/'PRIVACY.md').read_bytes(),
+    'tester-kit.md':(root/'docs/tester-kit.md').read_bytes(),
+    'managed-policy.md':(root/'docs/managed-policy.md').read_bytes(),
+    'EDGE-HANDOFF.md':(root/'docs/edge-handoff.md').read_bytes(),
     'SUBMISSION.md':(root/'docs/chrome-web-store.md').read_bytes(),
-    'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_text(encoding='utf-8').replace('(../portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
+    'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_text(encoding='utf-8').replace('(../portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').replace('(../tester-kit.md)','(tester-kit.md)').encode('utf-8'),
+    'VALIDATION.md':(root/'docs/validation.md').read_text(encoding='utf-8').split('## 0.3.1 native toolbar popup',1)[0].replace('(portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
+    'workflow-validation-0.4.0.json':(root/'docs/workflow-validation-0.4.0.json').read_bytes(),
+    'popup-validation-0.4.0.json':(root/'docs/popup-validation-0.4.0.json').read_bytes(),
+    'validation-results-0.4.0.json':(root/'docs/validation-results-0.4.0.json').read_bytes(),
     'COMPATIBILITY.md':(root/'docs/compatibility.md').read_text(encoding='utf-8').replace('(portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
     'PUBLIC-SAMPLE-MATRIX.md':(root/'docs/portal-matrix.md').read_text(encoding='utf-8').replace('(store/manual-smoke-test.md)','(FINAL-MANUAL-CHECKS.md)').replace('(compatibility.md)','(COMPATIBILITY.md)').encode('utf-8'),
     'START-HERE.txt':(

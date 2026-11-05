@@ -2,7 +2,7 @@
 
 ![Draft Cairn — Your words. Still within reach.](docs/store/readme-header.svg)
 
-Local answer recovery for long web applications. A free, MIT-licensed Chrome extension for grant writers, consultants, and agencies working through application portals.
+Keep a local safety copy of long application answers. Recover lost writing, check answer fit, and reuse approved paragraphs. Free, MIT-licensed, and private by default.
 
 Draft Cairn keeps a local safety copy of supported answers on websites you choose.
 
@@ -28,7 +28,7 @@ This is an early preview. Commercial demand and broad compatibility have not bee
 
 ## Install
 
-1. Download `draft-cairn-0.3.1.zip` from [Releases](https://github.com/librerob/draft-cairn/releases), verify it against `SHA256SUMS`, and extract it.
+1. Download `draft-cairn-0.4.0.zip` from [Releases](https://github.com/librerob/draft-cairn/releases), verify it against `SHA256SUMS`, and extract it.
 2. Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`.
 3. Pin Draft Cairn. On an ordinary HTTP/HTTPS website, open its popup and choose **Enable for this site**. Approve Chrome's site-access request.
 4. Type in a supported field and wait for **saved on this device**. Open **Recovery & library** to inspect saved text.
@@ -42,10 +42,26 @@ Preparing a store listing? The release also includes a separate `draft-cairn-sto
 - Visible, editable standard textareas, and ordinary text inputs with a declared `maxlength` of at least 120.
 - Plain-text answers in targeted top-level Quill, ProseMirror/Tiptap, CKEditor 5 and inline TinyMCE roots. Rich-text recovery uses copy back; formatting and attachments are not saved.
 - Up to 180 recovery records in a rolling history; the oldest recovery records are removed when the count or byte budget is reached, with a visible notice. Explicit library answers are never evicted. Up to four snapshots per field. Rapid edits update the current snapshot; revisions at least 30 seconds apart can remain as earlier snapshots.
-- One day of recovery by default on new installs (existing choices are preserved), configurable to 1, 3, 7, 14, or 30 days. Complete oversized pastes expire within one hour. Expiry cleanup runs hourly while Chrome is running and on reads/startup.
+- One day of recovery by default on new installs (existing choices are preserved), configurable to 1, 3, 7, 14, or 30 days globally and per site. Increasing retention does not extend earlier records or defeat storage eviction. Complete oversized pastes expire within one hour. Expiry cleanup runs hourly while Chrome is running and on reads/startup.
 - Library answers with a title and optional project. These remain until deleted; import/export uses a [documented v1 format](docs/library-format.md).
 
-The current source supports only the top-level page. Generic contenteditable, frames, shadow-root fields, browser-internal pages and incognito remain excluded. See the [public portal and editor sample matrix](docs/portal-matrix.md) and [precise compatibility limits](docs/compatibility.md). A public demo result does not establish compatibility with every customer portal using that technology.
+Supported ordinary fields and targeted rich editors can also save in open shadow roots and authorized HTTP/HTTPS frames. Enable both the containing site and an embedded form’s exact origin. Frame and shadow-root recovery is copy-only. Closed shadow roots, opaque/about:blank/srcdoc frames, generic contenteditable, browser-internal pages and incognito remain excluded. See the [public portal and editor sample matrix](docs/portal-matrix.md) and [precise compatibility limits](docs/compatibility.md). A public demo result does not establish compatibility with every customer portal using that technology.
+
+![Real local save, reload and recovery exercise](docs/images/recovery-demo.gif)
+
+## Reuse an answer without guessing the fit
+
+Focus a supported field, open the on-page Draft Cairn editor and choose **Use library answer**, or press **Alt+Shift+L** (configure conflicts in `chrome://extensions/shortcuts`). Choose a saved paragraph, inspect the projected result and character/word counts, then explicitly insert it at the saved cursor. Existing text outside your selection stays. A changed destination cancels insertion; oversized HTML limits disable it. The extension checks the visible result after 1.5 seconds. Rich editors remain copy-only.
+
+A visible, explicitly linked `342/500 words` or `120/500 characters` counter can supply an advisory website limit. Local word counts are whitespace estimates; website rules can differ. Conflicting or unrecognized counters are ignored. These hints do not prove server acceptance or block form submission.
+
+## Try it and keep an application copy
+
+Choose **Try a sample recovery** in the toolbar popup for a local, synthetic save → reload → recover exercise using the real encrypted store. It does not grant website access. On real sites, enable protection before writing.
+
+In Recovery drafts, select the saved revisions you want and choose **Export selected snapshot**. The readable Markdown file contains only those revisions, with question labels when page details were saved. It is an application snapshot, **not proof of submission**. It can miss fields that were never captured or have expired; exports remain outside vault protection.
+
+For several portals, use **Sites & settings → Enable several exact website origins** to request their host access together. Both the parent website and the embedded form origin must be enabled for frame capture. No vendor-wide wildcard presets or untested compatibility promises are bundled. Optional [organization policies](docs/managed-policy.md) restrict allowed origins and maximum retention; they never silently grant Chrome access.
 
 ## Appearance
 
@@ -101,6 +117,9 @@ Plain JavaScript, HTML, and CSS keep review and maintenance straightforward. The
 
 Restoration uses a hashed page path, a stable field descriptor, and the ordered form structure. Duplicate or missing identities refuse restoration. Pages with query strings or fragments support copying only. This conservatism reduces wrong-field restoration; it cannot prove that a website has kept the same meaning for an identifier. Always check restored text before submitting.
 
+- [Ten-tester pilot kit](docs/tester-kit.md) — invitation, synthetic tasks and grant-portal worksheet.
+- [Organization policy](docs/managed-policy.md) — optional origin restrictions and retention caps.
+- [Edge handoff](docs/edge-handoff.md) — prepared instructions; native Edge testing and submission remain pending.
 - [Commercial validation](docs/commercial-validation.md) — first users, alternatives, and decision criteria.
 - [Costs](docs/costs.md) — current requirements, no recurring infrastructure, future cost categories.
 - [Store listing and submission checklist](docs/chrome-web-store.md).

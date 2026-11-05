@@ -59,11 +59,11 @@
     state.drafts = state.drafts.filter(d => d.expires > now);
     return state;
   }
-  function fresh() { return {version:1,days:1,metadata:false,sessionOnly:false,appearance:'system',sites:[],blockedSites:[],ignoredFields:[],drafts:[],library:[]}; }
+  function fresh() { return {version:1,days:1,metadata:false,sessionOnly:false,appearance:'system',siteDays:{},sites:[],blockedSites:[],ignoredFields:[],drafts:[],library:[]}; }
   function privacyDefaults(state) {
     return {...state,metadata:state.metadata ?? true,sessionOnly:state.sessionOnly ?? false,
       appearance:['system','light','dark'].includes(state.appearance) ? state.appearance : 'system',
-      blockedSites:state.blockedSites || [],ignoredFields:state.ignoredFields || []};
+      siteDays:state.siteDays || {},blockedSites:state.blockedSites || [],ignoredFields:state.ignoredFields || []};
   }
   function minimalDraft(draft) {
     return {...draft,title:'',field:{label:''},restorable:false};

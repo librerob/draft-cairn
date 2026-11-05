@@ -11,6 +11,7 @@ for(const file of await readdir(root)) {
   if(!file.endsWith('.js'))continue;
   const url=new URL(file,root);execFileSync(process.execPath,['--check',fileURLToPath(url)]);
   const source=await readFile(url,'utf8');
+  assert(!/\u00c2\u00b7|\u00e2\u20ac/.test(source),`Encoding corruption in ${file}`);
   assert(!/innerHTML|outerHTML|insertAdjacentHTML|\beval\(|console\.|\bfetch\(|XMLHttpRequest/.test(source),`Unsafe sink or outbound API in ${file}`);
 }
 for(const p of Object.values(manifest.icons))await readFile(new URL(p,root));

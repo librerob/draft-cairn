@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Draft Cairn",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Local answer recovery, paste-limit warnings, and a reusable answer library for sites you choose.",
   "minimum_chrome_version": "120",
   "incognito": "not_allowed",
@@ -32,5 +32,16 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'; base-uri 'none'"
+  },
+  "commands": {
+    "open-library": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "Preview a library answer in the focused supported field"
+    }
+  },
+  "storage": {
+    "managed_schema": "managed-schema.json"
   }
 }

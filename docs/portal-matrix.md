@@ -1,37 +1,43 @@
 # Public application compatibility matrix
 
-Tested 23 October 2026 using Chromium 151.0.7922.34 on Linux, the real installed extension and synthetic narrative text. **Three application samples passed capture, visible-paste comparison and saved-text recovery after reload.** This is sample-level evidence, not certification of an entire platform or a completed application workflow.
+5 November 2026 · Draft Cairn 0.4.0 · Linux Chromium 151.0.7922.34 · synthetic narratives only.
 
-[Recorded results](portal-results-0.3.0.json) · [Public-site run](https://github.com/librerob/draft-cairn/actions/runs/39995486919) · tested runtime commit `5d2b786caf01a024aa9e59960419982a37b9bfd3`. The harness pre-grants named test hosts in a temporary manifest; native permission prompts remain a separate manual check. A successful collection workflow does not mean every row passed.
+**Three public application samples passed capture, visible-paste checks and saved-text recovery after reload.** These results apply to the exact samples/configurations below, not every tenant or a completed application workflow.
 
-| Platform and exact sample | Typing capture | Visible paste / recovery after reload | Direct restore | Scope and limitation |
-| --- | --- | --- | --- | --- |
-| [Jotform grant preview](https://www.jotform.com/form-templates/preview/50246885080962/classic&nofs&disableSmartEmbed=1) | Passed, textarea `input_33` | Passed / passed | Refused after reload; copy back available | Opened the template preview as a standalone page and used Next to reach its narrative page without entering contact information. The embedded preview on the template landing page is unsupported. |
-| [Greenhouse application](https://job-boards.greenhouse.io/anthropic/jobs/5065894008) | Passed, textarea `question_14439958008` | Passed / passed | Passed into the empty matched field | One public application question, tested without signing in or submitting an application. Other questions, uploads and tenant configurations were not tested. |
-| [Ashby application](https://jobs.ashbyhq.com/Ashby/0f5dbf59-687b-4d88-88a7-73ee0a66b48d/application) | Passed, textarea | Passed / passed | Copy back only | Opened the Application view of this public role. The tested entry retained a query string, so conservative restoration rules disabled direct restore. |
-| [SmartyGrants training round](https://training4.smartygrants.com.au/testround) | Not verified | Not verified | Not verified | Reached the public round information page; no editable narrative application field was reached without an applicant session. The closed Sneak Peek TEST round was also inspected. No account was created. |
-| [Submittable sign-in](https://manager.submittable.com/signin) | Not verified | Not verified | Not verified | Redirected to sign-in. No account, application fields or authenticated workflow were tested. This row does not establish compatibility. |
+[Recorded results](portal-results-0.4.0.json) · [Passing collection run](https://github.com/librerob/draft-cairn/actions/runs/42023649710) · tested runtime commit `5048269d37b4fb237d320096c40de4653ce66beb`. A collection run succeeding does not mean every row passed. Native permissions are pre-granted only in a temporary test manifest.
 
-For each passing sample, the harness typed a unique synthetic narrative, checked its saved contents, pasted different synthetic text with a trusted keyboard shortcut, confirmed that the visible paste matched and the pasted answer was saved, reloaded the page, and verified the saved pasted answer remained available. The Greenhouse test also requested explicit restoration. It did not press Submit, create an account, upload a document, fill personal/financial information, solve a CAPTCHA or verify the server's receipt of an application. Native OS clipboard behavior, forced session expiry and full multipage workflows remain unverified.
-
-## Actual rich-editor demos
-
-| Official public demo | Typed plain-text capture | Whole-field paste check / saved paste after reload | Recovery |
+| Exact sample | Typing / saved paste / reload recovery | Direct restore | Limit |
 | --- | --- | --- | --- |
-| [Quill](https://quilljs.com/) | Passed | Passed / passed | Copy back only |
-| [ProseMirror](https://prosemirror.net/examples/basic/) | Passed | Passed / passed | Copy back only |
-| [CKEditor 5](https://ckeditor.com/ckeditor-5/demo/feature-rich/) | Passed | Passed / passed | Copy back only |
-| Inline TinyMCE | DOM adapter fixture passed; vendor demo not tested | Not established on a vendor demo | Copy back only; iframe TinyMCE excluded |
-| Tiptap | Shares the ProseMirror DOM adapter; no separate live Tiptap configuration tested | Not separately established | Copy back only |
+| [Jotform standalone grant preview](https://www.jotform.com/form-templates/preview/50246885080962/classic&nofs&disableSmartEmbed=1), textarea input_33 | Passed / passed / passed | Refused after reload; copy back available | Reached a narrative after Next without entering contact details. |
+| [Greenhouse application](https://job-boards.greenhouse.io/anthropic/jobs/5065894008), textarea question_14439958008 | Passed / passed / passed | Passed into an empty matched field | One public question, no account or application submission. |
+| [Ashby application](https://jobs.ashbyhq.com/Ashby/0f5dbf59-687b-4d88-88a7-73ee0a66b48d/application), textarea | Passed / passed / passed | Copy only | Query-based entry; no full application workflow. |
+| Jotform embedded preview on its template landing page | Not verified | Copy only by design | Both origins enabled; no eligible narrative reached in the embedded check. Standalone success does not establish embedding success. |
+| Cognito grant template, embedded and standalone | Not verified | Not established | No eligible narrative reached in the initial configuration. |
+| Wufoo public builder | Not verified | Not established | No eligible narrative reached; a builder is not an applicant workflow. |
+| [SmartyGrants training round](https://training4.smartygrants.com.au/testround) | Not verified | Not established | Reached round information, not an authorized applicant narrative. |
+| [Submittable](https://manager.submittable.com/signin) | Not verified | Not established | Sign-in required. No account used. |
+| Fluxx, Foundant, WizeHive / Zengine | Not verified | Not established | Authorized tenant sessions were not available or exercised. |
 
-These checks save rendered words, not formatting, images, attachments, collaboration state or the editor's internal document model. Quill and CKEditor consume native editing events differently from ordinary fields; the extension observes rendered text after trusted beforeinput editing intent and persists the checked result of trusted pastes too. Partial rich-text selections keep the clipboard original for manual comparison instead of claiming a reliable automatic match.
+The passing checks use trusted typing and paste, confirm exact saved synthetic text, reload, then verify the saved pasted answer remains available. Only Greenhouse passed direct restoration in this public run. No form was submitted, no applicant account was created, and no contact/financial/client information was entered. Native OS clipboard behavior, forced remote session expiry and complete multipage workflows remain unverified.
 
-## Additional access observations
+## Editor and component evidence
 
-Cognito Forms' public grant template embeds a multipage form. Neither the landing page nor its standalone first page exposed an eligible narrative textarea during this check; later pages were not exercised. Wufoo's public builder did not expose an eligible editable narrative field in its initial state. These are **not compatibility passes**, and neither substitutes for a real applicant workflow.
+| Configuration | Evidence | Recovery |
+| --- | --- | --- |
+| [Quill official demo](https://quilljs.com/) | Typed text, trusted whole-field paste and saved text after reload passed | Plain text, copy only |
+| [ProseMirror official demo](https://prosemirror.net/examples/basic/) | Same checks passed | Plain text, copy only |
+| [CKEditor 5 official demo](https://ckeditor.com/ckeditor-5/demo/feature-rich/) | Same checks passed | Plain text, copy only |
+| Inline TinyMCE | Synthetic DIV adapter fixture only; no actual vendor iframe configuration tested | Copy only |
+| Tiptap | Shares the ProseMirror adapter; no separate live configuration tested | Copy only |
+| Open shadow-root ordinary fields | Synthetic capture/private-ancestor/closed-root/forged-event tests passed | Copy only |
+| Same-origin and cross-origin HTTP/HTTPS frames | Synthetic capture and origin/parent consent tests passed | Copy only |
 
-## Reproduce or report a different configuration
+Synthetic component tests establish the tested boundary, not a compatibility pass for an authenticated portal. Closed roots, opaque/about:blank/srcdoc frames and generic contenteditable remain unsupported. Formatting, files and editor document models are not recovered.
 
-Run `npm ci --ignore-scripts`, `npx playwright install chromium`, then `node tests/portals.mjs`, or dispatch the **Public portal compatibility** workflow. This opt-in test contacts only the listed public samples, uses a disposable profile and writes a compact JSON report plus synthetic screenshots to `test-results/portals/`. Sites may change, close their samples, introduce access checks or use different field configurations. The results file omits URL queries/fragments and does not contain answer text or credentials.
+## Reproduce and contribute
 
-Use the [native Chrome smoke-test worksheet](store/manual-smoke-test.md) with the unmodified ZIP before Web Store submission. A new report should identify the sample, date, Chrome/OS version, field type, saved-text and reload result, and any access blocker. Never attach real answers, profile data, session tokens or a live confidential application URL to a public issue. See [compatibility boundaries](compatibility.md) for timing, sensitive-field exclusions and restore requirements.
+Run `npm ci --ignore-scripts`, `npx playwright install chromium`, then `node tests/portals.mjs`, or dispatch Public portal compatibility. The harness contacts named public samples only and writes compact reports and synthetic screenshots. It never signs in, submits forms or solves access challenges. Sites and editor configurations change.
+
+For real grant workflows use the [tester kit](tester-kit.md) and [native smoke-test worksheet](store/manual-smoke-test.md). Report vendor, extension/Chrome/OS versions, editor/frame type and passed/failed/unexercised steps. Never publish confidential application URLs, answers, profiles or session tokens.
+
+Historical results remain available in [the 0.3.0 report](portal-results-0.3.0.json). See [precise compatibility boundaries](compatibility.md).

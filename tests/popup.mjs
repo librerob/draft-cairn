@@ -19,7 +19,7 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin='http://127.0.0.1:'+server.address().port;
 const out=path.join(root,'test-results');await mkdir(path.join(out,'screenshots'),{recursive:true});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const results=[];let browserVersion;
+const results=[],shortcuts=[];let browserVersion;
 async function protocol(browser,targetId) {
   const pending=new Map();let sequence=0;
   browser.on('Target.receivedMessageFromTarget',e=>{
@@ -92,10 +92,18 @@ try {
       await browser.send('Target.closeTarget',{targetId:target.targetId});
       console.log('PASS '+label);
     }
+    await api('SAVE_ANSWER',{answer:{title:'Synthetic shortcut answer',text:'Synthetic shortcut text',project:''}});
+    await page.bringToFront();await page.locator('#narrative').focus();await page.keyboard.press('Alt+Shift+L');
+    const session=await context.newCDPSession(page);let opened=false;
+    for(let n=0;n<60;n++){
+      const names=(await session.send('Accessibility.getFullAXTree')).nodes.map(n=>n.name?.value || '');
+      if(names.includes('Use a library answer') && names.includes('Synthetic shortcut answer')){opened=true;break;}await sleep(100);
+    }
+    assert(opened,'The native keyboard command must open the focused field library picker');shortcuts.push({scale,opened});console.log('PASS native-library-shortcut-'+scale);
     await context.close();context=null;
   }
 } finally {
-  await writeFile(path.join(out,'popup-summary.json'),JSON.stringify({version:manifest.version,browser:browserVersion,nativeToolbar:true,syntheticOnly:true,permissionPrompt:'not tested; loopback host pre-granted in test copy',results},null,2)+'\n');
+  await writeFile(path.join(out,'popup-summary.json'),JSON.stringify({version:manifest.version,browser:browserVersion,nativeToolbar:true,syntheticOnly:true,shortcuts,permissionPrompt:'not tested; loopback host pre-granted in test copy',results},null,2)+'\n');
   await context?.close();await new Promise(resolve=>server.close(resolve));
   assert.equal(path.dirname(path.resolve(temp)),path.resolve(tmpdir()));
   await rm(temp,{recursive:true,force:true});

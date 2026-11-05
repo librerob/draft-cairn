@@ -65,21 +65,8 @@ async function inspect(page,target,scope) {
     for(const frame of page.frames()) {
       const surface={url:publicUrl(frame.url()),topLevel:frame===page.mainFrame(),textareas:await frame.locator('textarea').count().catch(()=>0)};
       result.surfaces.push(surface);
-      if(frame===page.mainFrame())continue;
-      for(const candidate of await frame.locator('textarea').all()) {
-        if(!(await candidate.isVisible().catch(()=>false)) || !(await candidate.isEnabled().catch(()=>false)))continue;
-        const hint=await candidate.evaluate(el=>[el.id,el.name,el.getAttribute('aria-label'),el.labels?.[0]?.textContent].filter(Boolean).join(' '));
-        if(/password|email|phone|address|payment|bank|account|card|contact/i.test(hint))continue;
-        const text='Draft Cairn synthetic embedded-form exclusion check '+crypto.randomUUID();
-        await candidate.fill(text,{timeout:6000});await sleep(600);
-        const captured=(await api('STATE')).drafts.some(d=>d.text.includes(text));
-        result.status=captured ? 'unexpected frame capture' : 'embedded field exclusion confirmed';
-        result.reason='Trusted typing in this embedded narrative field is not captured. Open a standalone form when available; iframe recovery is unsupported.';
-        result.embeddedCapture=captured;return result;
-      }
     }
-    result.pageTitle=await page.title();
-    result.publicNotice=await page.locator('body').innerText().then(text=>text.slice(0,700)).catch(()=>'');return result;
+    return result;
   }
   result.field=await field.evaluate(el=>({tag:el.tagName,id:el.id,type:el.getAttribute('type'),classes:el.matches('[contenteditable]') ? el.className : undefined}));
   const marker='Draft Cairn synthetic compatibility check '+crypto.randomUUID()+'. This is test text, not an application. 😀';
@@ -109,6 +96,37 @@ async function inspect(page,target,scope) {
   } else result.restore='copy back only';
   return result;
 }
+async function inspectEmbedded(page,target,frame){
+  const result={name:target.name,scope:'embedded HTTP/HTTPS preview with both origins enabled',url:publicUrl(frame.url()),status:'not verified'};
+  const origin=new URL(frame.url()).origin;
+  // The temporary manifest grants only the named public sample hosts, never arbitrary third-party frames.
+  if(!(await ui.evaluate(async origin=>chrome.permissions.contains({origins:[origin+'/*']}),origin))){result.reason='Frame host was not in the named test grants.';return result;}
+  await api('ENABLE',{origin});
+  await frame.goto(frame.url(),{waitUntil:'domcontentloaded',timeout:30000});await sleep(1500);
+  if(target.name==='Jotform grant template'){
+    const next=frame.getByRole('button',{name:'Next',exact:true});if(await next.count()===1 && await next.isVisible())await next.click();
+  }
+  let field;
+  for(const candidate of await frame.locator('textarea').all()){
+    if(!await candidate.isVisible().catch(()=>false) || !await candidate.isEnabled().catch(()=>false) || await candidate.getAttribute('readonly')!==null)continue;
+    const hint=await candidate.evaluate(el=>[el.id,el.name,el.getAttribute('aria-label'),el.labels?.[0]?.textContent].filter(Boolean).join(' '));
+    if(!/password|email|phone|address|payment|bank|account|card|social.security|contact/i.test(hint)){field=candidate;break;}
+  }
+  if(!field){result.reason='No eligible narrative field reached in the authorized embedded preview.';return result;}
+  const marker='Draft Cairn synthetic embedded narrative '+crypto.randomUUID();await field.fill(marker,{timeout:10000});
+  let draft;for(let n=0;n<50;n++){draft=(await api('STATE')).drafts.find(d=>d.origin===origin && d.text===marker);if(draft)break;await sleep(100);}
+  result.capture=!!draft;result.field=await field.evaluate(el=>({tag:el.tagName,id:el.id}));
+  if(!draft){result.reason='Trusted embedded typing was not observed in recovery.';return result;}
+  await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:new URL(page.url()).origin});
+  const pasted='Draft Cairn synthetic embedded paste. Complete ending.';
+  await page.evaluate(text=>navigator.clipboard.writeText(text),pasted);await field.focus();await field.press('Control+A');await field.press('Control+V');await sleep(2000);
+  const paste=(await api('STATE')).drafts.find(d=>d.origin===origin && d.text===pasted);
+  result.pastedAnswerSaved=!!paste;result.visiblePaste=await field.inputValue()===pasted;result.restore='copy back only';
+  if(draft.restorable || paste?.restorable)throw new Error('Embedded draft must not allow direct restore');
+  await frame.goto(frame.url(),{waitUntil:'domcontentloaded',timeout:30000});
+  result.recoveryAfterReload=(await api('STATE')).drafts.some(d=>d.id===(paste || draft).id);
+  result.status=result.recoveryAfterReload && result.pastedAnswerSaved ? 'capture and reload recovery passed' : 'partial result; not a compatibility pass';return result;
+}
 try {
   for(const target of targets) {
     const page=await context.newPage();
@@ -121,9 +139,13 @@ try {
         }
       }
       const entry=await inspect(page,target,'public top-level sample');results.push(entry);
+      if(target.standalone && !entry.capture){
+        const embedded=page.frames().find(f=>f!==page.mainFrame() && target.standalone.test(f.url()));
+        if(embedded)results.push(await inspectEmbedded(page,target,embedded));
+      }
       if(target.standalone && !entry.capture) {
         const linked=page.frames().map(f=>f.url()).find(url=>target.standalone.test(url));
-        if(linked){await page.goto(linked,{waitUntil:'domcontentloaded',timeout:30000});await sleep(1500);results.push(await inspect(page,target,'embedded preview opened as a standalone page; embedding remains unsupported'));}
+        if(linked){await page.goto(linked,{waitUntil:'domcontentloaded',timeout:30000});await sleep(1500);results.push(await inspect(page,target,'public preview opened as a standalone page'));}
       }
     } catch(error){results.push({name:target.name,url:target.url,status:'not verified',reason:error.name==='TimeoutError' ? 'Navigation or field interaction timed out.' : 'Sample could not be exercised in this run.'});}
     finally{await page.close();}

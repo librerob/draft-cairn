@@ -1,0 +1,126 @@
+{
+  "version": "0.4.0",
+  "browser": "151.0.7922.34",
+  "nativeToolbar": true,
+  "syntheticOnly": true,
+  "shortcuts": [
+    {
+      "scale": 1,
+      "opened": true
+    },
+    {
+      "scale": 1.25,
+      "opened": true
+    }
+  ],
+  "permissionPrompt": "not tested; loopback host pre-granted in test copy",
+  "results": [
+    {
+      "scale": 1,
+      "theme": "light",
+      "enabled": false,
+      "width": 395,
+      "height": 600,
+      "rootWidth": 380,
+      "bodyWidth": 380,
+      "scheme": "light",
+      "status": "Protection is off",
+      "toggle": 302,
+      "card": 340
+    },
+    {
+      "scale": 1,
+      "theme": "dark",
+      "enabled": false,
+      "width": 395,
+      "height": 600,
+      "rootWidth": 380,
+      "bodyWidth": 380,
+      "scheme": "dark",
+      "status": "Protection is off",
+      "toggle": 302,
+      "card": 340
+    },
+    {
+      "scale": 1,
+      "theme": "light",
+      "enabled": true,
+      "width": 395,
+      "height": 600,
+      "rootWidth": 380,
+      "bodyWidth": 380,
+      "scheme": "light",
+      "status": "Protection is on",
+      "toggle": 302,
+      "card": 340
+    },
+    {
+      "scale": 1,
+      "theme": "dark",
+      "enabled": true,
+      "width": 395,
+      "height": 600,
+      "rootWidth": 380,
+      "bodyWidth": 380,
+      "scheme": "dark",
+      "status": "Protection is on",
+      "toggle": 302,
+      "card": 340
+    },
+    {
+      "scale": 1.25,
+      "theme": "light",
+      "enabled": false,
+      "width": 395,
+      "height": 600,
+      "rootWidth": 380,
+      "bodyWidth": 380,
+      "scheme": "light",
+      "status": "Protection is off",
+      "toggle": 302.3999938964844,
+      "card": 340
+    },
+    {
+      "scale": 1.25,
+      "theme": "dark",
+      "enabled": false,
+      "width": 395,
+      "height": 600,
+      "rootWidth": 380,
+      "bodyWidth": 380,
+      "scheme": "dark",
+      "status": "Protection is off",
+      "toggle": 302.3999938964844,
+      "card": 340
+    },
+    {
+      "scale": 1.25,
+      "theme": "light",
+      "enabled": true,
+      "width": 395,
+      "height": 600,
+      "rootWidth": 380,
+      "bodyWidth": 380,
+      "scheme": "light",
+      "status": "Protection is on",
+      "toggle": 302.3999938964844,
+      "card": 340
+    },
+    {
+      "scale": 1.25,
+      "theme": "dark",
+      "enabled": true,
+      "width": 395,
+      "height": 600,
+      "rootWidth": 380,
+      "bodyWidth": 380,
+      "scheme": "dark",
+      "status": "Protection is on",
+      "toggle": 302.3999938964844,
+      "card": 340
+    }
+  ],
+  "testedCommit": "5048269d37b4fb237d320096c40de4653ce66beb",
+  "ciRun": "https://github.com/librerob/draft-cairn/actions/runs/42023649695",
+  "date": "2026-11-05"
+}

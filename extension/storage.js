@@ -1,3 +1,4 @@
+import './workflows.js';
 import * as D from './record-store.js';
 import * as V from './crypto.js';
 import * as legacy from './legacy-storage.js';
@@ -10,7 +11,7 @@ const size=value=>encoder.encode(JSON.stringify(value)).length;
 const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(value))),b=>b.toString(16).padStart(2,'0')).join('');
 function config(state) {
   const s=C.privacyDefaults(state);
-  return {version:1,days:s.days,metadata:s.metadata,sessionOnly:s.sessionOnly,appearance:s.appearance,sites:[...s.sites],
+  return {version:1,days:s.days,metadata:s.metadata,sessionOnly:s.sessionOnly,appearance:s.appearance,siteDays:{...s.siteDays},sites:[...s.sites],
     blockedSites:[...s.blockedSites],ignoredFields:[...s.ignoredFields],evicted:s.evicted || 0};
 }
 function blank(state=C.fresh()) {return {...config(state),v:3,generation:crypto.randomUUID(),mode:'automatic',drafts:[],library:[],sessionRef:null};}
@@ -174,14 +175,14 @@ export async function commit(state) {
   if(before.mode==='vault' && !await privateKey(before))throw new Error('Vault is locked. Unlock it before changing saved answers.');
   await replaceState(state,{...before},before);
 }
-export async function capture(incoming) {
+export async function capture(incoming,maximumDays=30) {
   if(typeof incoming.text!=='string' || incoming.text.length>C.MAX_TEXT)
     throw new Error('Invalid draft: answers over 100,000 UTF-16 units cannot be saved. Keep a separate copy.');
   if(!incoming.text)return {saved:true,evicted:0};
   await ensure();const before=await effective(), now=Date.now(), id=crypto.randomUUID();
   let record={...incoming,id};if(!before.metadata)record=C.minimalDraft(record);
   const provisional=await entryFor({...record,saved:now},'drafts',before);
-  const drafts=C.planDraft(before.drafts,provisional,before.days,now);
+  const drafts=C.planDraft(before.drafts,provisional,Math.min(CairnWorkflows.retention(before,incoming.origin),maximumDays),now);
   record={...record,saved:drafts[0].saved,started:drafts[0].started,expires:drafts[0].expires};
   drafts[0].bytes=size(record);
   const next={...before,drafts}, libraryBytes=next.library.reduce((n,e)=>n+e.bytes,0), overhead=size(config(next));
@@ -200,7 +201,7 @@ export async function capture(incoming) {
   return {saved:true,evicted};
 }
 export async function updateIndex(change) {
-  await ensure();const before=await effective(), next={...before,sites:[...before.sites],blockedSites:[...before.blockedSites],ignoredFields:[...before.ignoredFields],drafts:[...before.drafts],library:[...before.library]};
+  await ensure();const before=await effective(), next={...before,siteDays:{...before.siteDays},sites:[...before.sites],blockedSites:[...before.blockedSites],ignoredFields:[...before.ignoredFields],drafts:[...before.drafts],library:[...before.library]};
   await change(next);
   next.drafts=next.drafts.filter(d=>d.expires>Date.now());
   if(next.sessionOnly) {
