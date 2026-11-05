@@ -35,6 +35,10 @@ kit_files={
     'EDGE-HANDOFF.md':(root/'docs/edge-handoff.md').read_bytes(),
     'SUBMISSION.md':(root/'docs/chrome-web-store.md').read_bytes(),
     'FINAL-MANUAL-CHECKS.md':(root/'docs/store/manual-smoke-test.md').read_text(encoding='utf-8').replace('(../portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').replace('(../tester-kit.md)','(tester-kit.md)').encode('utf-8'),
+    'VALIDATION.md':(root/'docs/validation.md').read_text(encoding='utf-8').split('## 0.3.1 native toolbar popup',1)[0].replace('(portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
+    'workflow-validation-0.4.0.json':(root/'docs/workflow-validation-0.4.0.json').read_bytes(),
+    'popup-validation-0.4.0.json':(root/'docs/popup-validation-0.4.0.json').read_bytes(),
+    'validation-results-0.4.0.json':(root/'docs/validation-results-0.4.0.json').read_bytes(),
     'COMPATIBILITY.md':(root/'docs/compatibility.md').read_text(encoding='utf-8').replace('(portal-matrix.md)','(PUBLIC-SAMPLE-MATRIX.md)').encode('utf-8'),
     'PUBLIC-SAMPLE-MATRIX.md':(root/'docs/portal-matrix.md').read_text(encoding='utf-8').replace('(store/manual-smoke-test.md)','(FINAL-MANUAL-CHECKS.md)').replace('(compatibility.md)','(COMPATIBILITY.md)').encode('utf-8'),
     'START-HERE.txt':(

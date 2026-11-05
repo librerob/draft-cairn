@@ -1,6 +1,18 @@
 # Validation record
 
-24 October 2026 · synthetic fixtures and public samples
+5 November 2026 · current and historical synthetic/public evidence
+
+## 0.4.0 workflow and component coverage
+
+5 November 2026. **22 unit groups, 63 existing Chromium scenarios, 26 new workflow scenarios, eight actual toolbar-popup cases and two trusted keyboard-shortcut cases passed** on runtime commit `5048269d37b4fb237d320096c40de4653ce66beb`. [Passing run](https://github.com/librerob/draft-cairn/actions/runs/42023649695) · [existing regressions](validation-results-0.4.0.json) · [new workflows](workflow-validation-0.4.0.json) · [native popup/shortcut results](popup-validation-0.4.0.json).
+
+The workflow suite exercises open shadow roots, private shadow ancestors, excluded closed roots, rejection of synthetic composed input, separately scoped same-origin frames, exact-origin enforcement across ports, cross-origin frame opt-in, disabled containing pages, complete-batch permission gating, worker completion after initiating UI closure, per-site retention and shorter expiry, selection-preserving library insertion, oversized/stale/route-changed destinations, delayed clipping, rich copy-only use, linked counters and unrecognized hints, locked library access, policy denial after preview, managed origin and retention enforcement, Markdown snapshot download and encrypted practice recovery after reload. Managed values and host grants are simulated in isolated profiles; native permission dialogs and actual enterprise policy delivery remain manual.
+
+The headed suite opens the actual action popup without setting its viewport, checks eight theme/on-off/scale combinations, then presses Alt+Shift+L in a real focused field at 100% and 125% scale and verifies the picker opens. The default chord also has a trusted page-key fallback for Chromium environments that pass it through instead of dispatching the command. Changed or unassigned Chrome shortcuts disable that fallback. No shortcut inserts automatically.
+
+Public samples were rerun separately on the same runtime commit. Jotform standalone, Greenhouse and Ashby passed capture/paste/reload recovery; three official editor demos passed plain-text checks. Embedded Jotform/Cognito previews did not expose an eligible narrative in that run and remain unverified. No authenticated grant-portal workflow is established. [Current sample matrix](portal-matrix.md) · [public run](https://github.com/librerob/draft-cairn/actions/runs/42023649710).
+
+Static/syntax checks, 26 text contrast pairs, six control-boundary pairs, asset dimensions, unit checks and reproducible packaging passed. New workflow screenshots show the shipped light/dark interface with synthetic answers. The 20-second README GIF uses four real practice screenshots from runtime-equivalent practice UI in commit `b0ae76835de48b13f64ea31f00f94c7114ca8941`; no mock application response is shown. There is no native Windows/macOS, Edge, screen-reader, full grant-session, enterprise deployment or independent cryptographic-audit claim. The native host prompt and daily OS clipboard gates remain in the smoke-test worksheet.
 
 ## 0.3.1 native toolbar popup
 

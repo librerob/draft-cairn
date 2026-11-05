@@ -47,6 +47,8 @@ Preparing a store listing? The release also includes a separate `draft-cairn-sto
 
 Supported ordinary fields and targeted rich editors can also save in open shadow roots and authorized HTTP/HTTPS frames. Enable both the containing site and an embedded form’s exact origin. Frame and shadow-root recovery is copy-only. Closed shadow roots, opaque/about:blank/srcdoc frames, generic contenteditable, browser-internal pages and incognito remain excluded. See the [public portal and editor sample matrix](docs/portal-matrix.md) and [precise compatibility limits](docs/compatibility.md). A public demo result does not establish compatibility with every customer portal using that technology.
 
+![Real local save, reload and recovery exercise](docs/images/recovery-demo.gif)
+
 ## Reuse an answer without guessing the fit
 
 Focus a supported field, open the on-page Draft Cairn editor and choose **Use library answer**, or press **Alt+Shift+L** (configure conflicts in `chrome://extensions/shortcuts`). Choose a saved paragraph, inspect the projected result and character/word counts, then explicitly insert it at the saved cursor. Existing text outside your selection stays. A changed destination cancels insertion; oversized HTML limits disable it. The extension checks the visible result after 1.5 seconds. Rich editors remain copy-only.
