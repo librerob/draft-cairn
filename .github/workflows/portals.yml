@@ -2,7 +2,7 @@ name: Public portal compatibility
 on:
   workflow_dispatch:
   push:
-    branches: [feat/paste-verification]
+    branches: [feat/paste-verification, feat/application-workflows]
 permissions:
   contents: read
 jobs:

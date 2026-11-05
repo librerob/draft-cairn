@@ -1,0 +1,75 @@
+// Synthetic workflow and authorization regression. No applicant sessions or submissions.
+import {mkdtemp,cp,readFile,writeFile,rm,mkdir} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {fileURLToPath} from 'node:url';
+import {spawn} from 'node:child_process';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+const root=fileURLToPath(new URL('../',import.meta.url)),base='http://127.0.0.1:8765',child='http://127.0.0.1:8766';
+const temp=await mkdtemp(path.join(tmpdir(),'draft-cairn-workflows-')),extension=path.join(temp,'extension');
+await cp(path.join(root,'extension'),extension,{recursive:true});
+const manifest=JSON.parse(await readFile(path.join(extension,'manifest.json'),'utf8'));assert(!manifest.host_permissions);manifest.host_permissions=['http://127.0.0.1/*'];
+await writeFile(path.join(extension,'manifest.json'),JSON.stringify(manifest));
+await writeFile(path.join(extension,'background.js'),(await readFile(path.join(extension,'background.js'),'utf8'))+'\nimport * as testStore from "./storage.js";globalThis.testStore=testStore;\n');
+const servers=[8765,8766].map(port=>spawn(process.execPath,['scripts/demo.mjs'],{cwd:root,env:{...process.env,PORT:String(port)},stdio:'ignore'}));
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+for(const origin of [base,child])for(let n=0;n<60;n++){try{if((await fetch(origin+'/workflows.html')).ok)break;}catch{}await wait(100);}
+let context;const report=[],check=name=>{report.push(name);console.log('PASS '+name);};
+async function poll(fn,predicate,timeout=10000){const end=Date.now()+timeout;while(Date.now()<end){const value=await fn();if(predicate(value))return value;await wait(100);}throw new Error('Synthetic workflow scenario timed out');}
+async function api(ui,type,data={}){const r=await ui.evaluate(async m=>chrome.runtime.sendMessage(m),{type,...data});if(!r?.ok)throw new Error(r?.error || 'No worker response');return r.data;}
+const sessions=new WeakMap();
+async function session(page){if(!sessions.has(page))sessions.set(page,await context.newCDPSession(page));return sessions.get(page);}
+async function ax(page){return (await (await session(page)).send('Accessibility.getFullAXTree')).nodes;}
+async function names(page){return (await ax(page)).map(n=>n.name?.value || '');}
+async function button(page,name){return (await ax(page)).find(n=>n.role?.value==='button' && (typeof name==='string' ? n.name?.value===name : name(n.name?.value || '')));}
+async function click(page,name){const n=await button(page,name);assert(n?.backendDOMNodeId,'Expected workflow button');const s=await session(page);await s.send('DOM.scrollIntoViewIfNeeded',{backendNodeId:n.backendDOMNodeId});const {model}=await s.send('DOM.getBoxModel',{backendNodeId:n.backendDOMNodeId});const q=model.content;await page.mouse.click((q[0]+q[2]+q[4]+q[6])/4,(q[1]+q[3]+q[5]+q[7])/4);}
+async function close(page){await click(page,'Close editor');await wait(100);}
+async function picker(page,selector){await page.locator(selector).focus();await click(page,n=>n.startsWith('Draft Cairn ·'));await click(page,'Use library answer');await poll(()=>names(page),n=>n.includes('Garden summary · Synthetic'));}
+async function disabled(page,name){const n=await button(page,name);assert(n);return n.properties.some(p=>p.name==='disabled' && p.value.value);}
+try{
+  const options={headless:true,channel:'chromium',viewport:{width:1280,height:900},args:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`]};if(process.env.CHROMIUM_PATH)options.executablePath=process.env.CHROMIUM_PATH;
+  context=await chromium.launchPersistentContext(path.join(temp,'profile'),options);
+  const worker=context.serviceWorkers()[0] || await context.waitForEvent('serviceworker'),id=new URL(worker.url()).host;
+  await worker.evaluate(()=>{chrome.permissions.remove=async()=>false;});
+  const ui=await context.newPage();await ui.goto(`chrome-extension://${id}/workspace.html`);await ui.waitForFunction(()=>document.getElementById('summary').textContent.includes('revisions'));
+  await api(ui,'PRIVACY',{metadata:true});await api(ui,'ENABLE',{origin:base});
+  const page=await context.newPage();await page.goto(base+'/workflows.html');await poll(()=>names(page),n=>n.some(s=>s.startsWith('Draft Cairn ·')));
+  const tabId=await ui.evaluate(async url=>(await chrome.tabs.query({})).find(t=>t.url===url).id,base+'/workflows.html');
+  await page.locator('#narrative').fill('Synthetic ordinary narrative');await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic ordinary narrative'));check('top-level capture remains available with the new frame scope');
+  await page.locator('#shadow-host textarea').fill('Synthetic open shadow answer');let state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic open shadow answer'));
+  const shadow=state.drafts.find(d=>d.text==='Synthetic open shadow answer');assert(!shadow.restorable);await assert.rejects(api(ui,'RESTORE',{id:shadow.id,tabId}));check('open shadow-root capture works and remains copy-only');
+  await page.locator('#private-host textarea').fill('Synthetic private shadow answer');await wait(600);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic private shadow answer'));check('private markers on shadow hosts and ancestors prevent capture');
+  await page.evaluate(()=>globalThis.focusClosed());await page.keyboard.type('Synthetic closed shadow answer');await wait(600);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic closed shadow answer'));check('closed shadow roots remain unsupported and are not captured');
+  await page.locator('#shadow-host textarea').evaluate(el=>{el.value='Synthetic forged shadow';el.dispatchEvent(new Event('input',{bubbles:true,composed:true}));});await wait(600);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic forged shadow'));check('synthetic composed input cannot create a shadow draft');
+  const same=page.frame({url:base+'/frame.html'}),cross=page.frame({url:child+'/frame.html'});assert(same&&cross);
+  await same.locator('#frame-answer').fill('Synthetic same-origin frame');await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic same-origin frame' && !d.restorable));check('same-origin frame recovery saves a separately scoped copy-only draft');
+  await cross.locator('#frame-answer').fill('Synthetic disabled cross frame');await wait(600);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic disabled cross frame'));check('Chrome host access across ports does not enable a different frame origin');
+  await api(ui,'ENABLE',{origin:child});await page.reload();await wait(500);
+  await page.frame({url:child+'/frame.html'}).locator('#frame-answer').fill('Synthetic enabled cross frame');await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic enabled cross frame' && !d.restorable));check('cross-origin frame saves only after its own exact origin is enabled');
+  await api(ui,'DISABLE',{origin:base});await page.frame({url:child+'/frame.html'}).locator('#frame-answer').fill('Synthetic disabled containing page');await wait(600);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic disabled containing page'));check('disabling the containing site stops capture in enabled cross-origin children');
+  await api(ui,'ENABLE',{origin:base,tabId});await wait(250);
+  await api(ui,'RETENTION',{origin:base,days:14});await page.locator('#other').fill('Synthetic fourteen-day answer');state=await poll(()=>api(ui,'STATE'),s=>s.drafts.some(d=>d.text==='Synthetic fourteen-day answer'));const retained=state.drafts.find(d=>d.text==='Synthetic fourteen-day answer');assert.equal(retained.expires-retained.saved,14*86400000);
+  await api(ui,'RETENTION',{origin:base,days:3});state=await api(ui,'STATE');assert.equal(state.drafts.find(d=>d.id===retained.id).expires,retained.saved+3*86400000);check('per-site retention controls new records and shortens existing expiry');
+  await api(ui,'SAVE_ANSWER',{answer:{title:'Garden summary',project:'Synthetic',text:'A garden for everyone.'}});
+  await api(ui,'SAVE_ANSWER',{answer:{title:'Oversized answer',text:'x'.repeat(600),project:'Synthetic'}});
+  await page.locator('#narrative').fill('Prefix suffix');await page.locator('#narrative').evaluate(el=>el.setSelectionRange(7,7));await picker(page,'#narrative');await click(page,'Garden summary · Synthetic');await poll(()=>disabled(page,'Insert at saved cursor'),d=>!d);await click(page,'Insert at saved cursor');await poll(()=>names(page),n=>n.some(s=>s.includes('Visible insertion matches')));assert.equal(await page.locator('#narrative').inputValue(),'Prefix A garden for everyone.suffix');check('library insertion previews and preserves existing text outside the saved selection');
+  await mkdir(path.join(root,'test-results/screenshots'),{recursive:true});await page.screenshot({path:path.join(root,'test-results/screenshots/workflow-library.png')});await close(page);
+  await picker(page,'#narrative');await click(page,'Oversized answer · Synthetic');assert(await disabled(page,'Insert at saved cursor'));assert.equal(await page.locator('#narrative').inputValue(),'Prefix A garden for everyone.suffix');check('oversized library insertion is disabled and leaves the website untouched');await close(page);
+  await picker(page,'#narrative');await click(page,'Garden summary · Synthetic');await page.locator('#narrative').evaluate(el=>{el.value='Changed behind the preview';});await click(page,'Insert at saved cursor');await poll(()=>names(page),n=>n.some(s=>s.includes('destination changed')));assert.equal(await page.locator('#narrative').inputValue(),'Changed behind the preview');check('stale insertion previews cannot overwrite a changed destination');await close(page);
+  await page.locator('#narrative').fill('');await page.locator('#narrative').evaluate(el=>el.addEventListener('input',()=>setTimeout(()=>{el.value=el.value.slice(0,5);},100),{once:true}));await picker(page,'#narrative');await click(page,'Garden summary · Synthetic');await click(page,'Insert at saved cursor');await poll(()=>names(page),n=>n.some(s=>s.includes('website changed or removed')));assert((await api(ui,'STATE')).library.some(a=>a.text==='A garden for everyone.'));check('post-insertion verification detects delayed clipping and preserves the library original');await close(page);
+  await picker(page,'#rich');await click(page,'Garden summary · Synthetic');assert(await disabled(page,'Insert at saved cursor'));check('rich-text library use remains copy-only');await close(page);
+  await page.locator('#narrative').fill(Array(51).fill('word').join(' '));await poll(()=>names(page),n=>n.some(s=>s.includes('website reports 51/50 words') && s.includes('over by 1')));check('linked word counters are shown as website reports alongside local estimates');
+  await page.locator('#narrative-count').evaluate(el=>{el.textContent='Section 1/2';});await page.locator('#other').focus();await page.locator('#narrative').focus();assert(!(await names(page)).some(s=>s.includes('website reports')));check('unrecognized counters produce no inferred limit');
+  const password='Synthetic workflow vault passphrase';await api(ui,'VAULT_ENABLE',{passphrase:password,acknowledged:true});await api(ui,'VAULT_LOCK');await page.locator('#narrative').fill('');await page.locator('#narrative').focus();await click(page,n=>n.startsWith('Draft Cairn ·'));await click(page,'Use library answer');await poll(()=>names(page),n=>n.some(s=>s.includes('Unlock your vault in the workspace')));assert(!(await names(page)).includes('Garden summary · Synthetic'));check('locked vaults do not release library titles or answers into a new picker');await close(page);
+  await api(ui,'VAULT_UNLOCK',{passphrase:password});
+  // Simulated managed storage input: tests apply policy through the shipping reader, not a second implementation.
+  await worker.evaluate(()=>{chrome.storage.managed.get=async()=>({AllowedOrigins:['http://127.0.0.1:8765'],MaxRetentionDays:3});});
+  await assert.rejects(api(ui,'ENABLE',{origin:child}));await assert.rejects(api(ui,'RETENTION',{origin:base,days:14}));await page.frame({url:child+'/frame.html'}).locator('#frame-answer').fill('Synthetic policy denied frame');await wait(600);assert(!(await api(ui,'STATE')).drafts.some(d=>d.text==='Synthetic policy denied frame'));check('managed origin restrictions and maximum retention apply to UI actions and frame captures');
+  await ui.getByRole('button',{name:'Recovery drafts',exact:true}).click();await ui.locator('#refresh').click();await ui.getByLabel('Include in application snapshot').first().check();ui.once('dialog',d=>d.accept());const downloadPromise=ui.waitForEvent('download');await ui.locator('#snapshot').click();const download=await downloadPromise;const raw=await readFile(await download.path(),'utf8');assert.match(raw,/not proof of submission/);assert.match(raw,/## /);check('selected saved revisions export as readable Markdown with an explicit submission disclaimer');
+  const practice=await context.newPage();await practice.goto(`chrome-extension://${id}/practice.html`);await practice.locator('#practice-answer').fill('Synthetic practice recovery');await practice.locator('#practice-save').click();await practice.getByRole('status').filter({hasText:'Saved on this device'}).waitFor();await practice.reload();assert.equal(await practice.locator('#practice-answer').inputValue(),'');await practice.locator('#practice-recover').click();await poll(()=>practice.locator('#practice-answer').inputValue(),v=>v==='Synthetic practice recovery');await practice.locator('#practice-clear').click();check('local first-run practice saves through encryption and recovers after reload');
+  await writeFile(path.join(root,'test-results/workflow-summary.json'),JSON.stringify({version:manifest.version,browser:context.browser().version(),automated:report,syntheticOnly:true,permissions:'temporary loopback pre-grant; native prompt remains manual',managed:'managed values simulated through chrome.storage.managed.get; enterprise deployment remains manual'},null,2));
+}finally{
+  await context?.close();for(const server of servers)server.kill();
+  assert.equal(path.dirname(path.resolve(temp)),path.resolve(tmpdir()));assert(path.basename(temp).startsWith('draft-cairn-workflows-'));await rm(temp,{recursive:true,force:true});
+}

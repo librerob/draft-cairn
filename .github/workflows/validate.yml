@@ -27,6 +27,7 @@ jobs:
       - run: npm test
       - run: npx playwright install chromium
       - run: npm run test:browser
+      - run: node tests/workflows.mjs
       - run: xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" node tests/popup.mjs
       - run: |
           python3 scripts/package.py
@@ -41,6 +42,7 @@ jobs:
           path: |
             dist/
             test-results/browser-summary.json
+            test-results/workflow-summary.json
             test-results/popup-summary.json
             test-results/screenshots/*.png
           retention-days: 14
@@ -58,4 +60,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="$(node -p "require('./extension/manifest.json').version")"
-          gh release create "v$version" "dist/draft-cairn-$version.zip" "dist/draft-cairn-store-kit-$version.zip" dist/SHA256SUMS --target "$GITHUB_SHA" --prerelease --title "Draft Cairn $version · preview" --notes-file docs/release-notes.md
+          gh release create "v$version" "dist/draft-cairn-$version.zip" "dist/draft-cairn-store-kit-$version.zip" dist/SHA256SUMS --target "$GITHUB_SHA" --prerelease --title "Draft Cairn $version Â· preview" --notes-file docs/release-notes.md

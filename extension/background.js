@@ -1,24 +1,28 @@
 import './core.js';
 import * as S from './storage.js';
-const C=globalThis.Cairn;
+const C=globalThis.Cairn,W=globalThis.CairnWorkflows;
+async function managed() {return W.policy(await chrome.storage.managed.get(null).catch(()=>({})));}
+function policyAllows(policy,origin){return policy.allowed===null || policy.allowed.includes(origin);}
 let queue=Promise.resolve(),lastError='';
 const ready=Promise.all([chrome.storage.local.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'}),chrome.storage.session.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'})]);
 function serial(fn){const next=queue.then(async()=>{await ready;return fn();});queue=next.catch(()=>{});return next;}
 const digest=async text=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');
-const trusted=sender=>sender.id===chrome.runtime.id && !sender.tab?.incognito && ['popup.html','workspace.html'].some(p=>sender.url?.split('?')[0]===chrome.runtime.getURL(p));
+const trusted=sender=>sender.id===chrome.runtime.id && !sender.tab?.incognito && ['popup.html','workspace.html','practice.html'].some(p=>sender.url?.split('?')[0]===chrome.runtime.getURL(p));
 async function registerSites(state) {
   const current=(await chrome.scripting.getRegisteredContentScripts()).find(s=>s.id==='cairn-protection');
-  const patterns=[...new Set(state.sites.map(C.hostPattern))].sort();
+  const policy=await managed();
+  const patterns=[...new Set(state.sites.filter(o=>policyAllows(policy,o)).map(C.hostPattern))].sort();
   if(!patterns.length){if(current)await chrome.scripting.unregisterContentScripts({ids:[current.id]});return;}
-  if(current && JSON.stringify([...current.matches].sort())===JSON.stringify(patterns))return;
-  const script={id:'cairn-protection',matches:patterns,js:['core.js','content.js'],runAt:'document_start',allFrames:false,persistAcrossSessions:true};
+  if(current && JSON.stringify([...current.matches].sort())===JSON.stringify(patterns) && current.allFrames===true && current.js.includes('workflows.js'))return;
+  const script={id:'cairn-protection',matches:patterns,js:['core.js','workflows.js','content.js'],runAt:'document_start',allFrames:true,persistAcrossSessions:true};
   if(current)await chrome.scripting.updateContentScripts([script]);else await chrome.scripting.registerContentScripts([script]);
 }
 async function recheckPages() {
   const tabs=await chrome.tabs.query({});
-  await Promise.allSettled(tabs.map(t=>chrome.tabs.sendMessage(t.id,{type:'RECHECK'},{frameId:0})));
+  await Promise.allSettled(tabs.map(t=>chrome.tabs.sendMessage(t.id,{type:'RECHECK'})));
 }
 async function enable(origin,tabId) {
+  if(!policyAllows(await managed(),origin))throw new Error('Site is not allowed by your organization.');
   if(!(await chrome.permissions.contains({origins:[C.hostPattern(origin)]})))throw new Error('Site access was not granted.');
   await S.updateIndex(state=>{
     if(state.blockedSites.includes(origin))throw new Error('Site is blocked. Remove it from Never capture in settings first.');
@@ -30,8 +34,8 @@ async function enable(origin,tabId) {
   if(Number.isInteger(tabId)) {
     const tab=await chrome.tabs.get(tabId).catch(()=>null);
     if(tab && !tab.incognito && tab.url && C.originOf(tab.url)===origin) {
-      await chrome.scripting.executeScript({target:{tabId},files:['core.js','content.js']});
-      await chrome.tabs.sendMessage(tabId,{type:'START'},{frameId:0});
+      await chrome.scripting.executeScript({target:{tabId,allFrames:true},files:['core.js','workflows.js','content.js']});
+      await chrome.tabs.sendMessage(tabId,{type:'START'});
     }
   }
 }
@@ -46,15 +50,14 @@ async function finishPending() {
     }
   }
 }
-async function stopPages(origin) {
-  const tabs=await chrome.tabs.query({});
-  await Promise.allSettled(tabs.filter(t=>!origin || t.url && (()=>{try{return C.originOf(t.url)===origin;}catch{return false;}})()).map(t=>chrome.tabs.sendMessage(t.id,{type:'STOP'},{frameId:0})));
-}
+async function stopPages() { await recheckPages(); }
 async function activeOrigin(sender) {
-  if(!sender.tab || sender.tab.incognito || sender.frameId!==0)throw new Error('This page is not supported.');
-  const origin=C.originOf(sender.url),state=await S.publicState();
+  if(!sender.tab || sender.tab.incognito || !Number.isInteger(sender.frameId))throw new Error('This page is not supported.');
+  const origin=C.originOf(sender.url),state=await S.publicState(),policy=await managed();
+  const top=new URL(sender.tab.url);
+  if(!state.sites.includes(top.origin) || state.blockedSites.includes(top.origin) || !policyAllows(policy,top.origin) || !policyAllows(policy,origin) || !(await chrome.permissions.contains({origins:[C.hostPattern(top.origin)]})))throw new Error('Protection is off for the containing website.');
   if(!state.sites.includes(origin) || state.blockedSites.includes(origin) || !(await chrome.permissions.contains({origins:[C.hostPattern(origin)]})))throw new Error('Protection is off for this site.');
-  return {origin,state,url:new URL(sender.url)};
+  return {origin,state,url:new URL(sender.url),policy,scope:sender.frameId===0 ? '' : '|frame|'+top.origin+top.pathname+'|'+sender.frameId};
 }
 function validateField(f) {
   if(!f || !C.allowedField(f))throw new Error('Field is not supported.');
@@ -64,11 +67,13 @@ function validateField(f) {
 async function handle(m,sender) {
   if(!m || typeof m.type!=='string')throw new Error('Invalid request.');
   if(sender.tab && !trusted(sender)) {
-    const {origin,state,url}=await activeOrigin(sender);
-    if(m.type==='HELLO')return {active:true,appearance:state.appearance,ignoredFields:state.ignoredFields.filter(f=>f.origin===origin).map(f=>f.id)};
+    const {origin,state,url,policy,scope}=await activeOrigin(sender);
+    if(m.type==='LIBRARY_LIST'){const view=await S.load();return view.library.map(({id,title,project})=>({id,title,project}));}
+    if(m.type==='LIBRARY_GET'){const view=await S.load(),answer=view.library.find(a=>a.id===m.id);if(!answer)throw new Error('Choose an existing library answer.');return {text:answer.text,title:answer.title};}
+    if(m.type==='HELLO')return {active:true,scope,appearance:state.appearance,ignoredFields:state.ignoredFields.filter(f=>f.origin===origin).map(f=>f.id)};
     if(!['CAPTURE','IGNORE_FIELD'].includes(m.type))throw new Error('Unavailable from this page.');
     const f=m.field;validateField(f);
-    const pageKey=await digest(origin+url.pathname),fieldKey=await digest(origin+pageKey+C.fieldIdentity(f));
+    const pageKey=await digest(origin+url.pathname+scope),fieldKey=await digest(origin+pageKey+C.fieldIdentity(f));
     if(m.type==='IGNORE_FIELD') {
       await S.updateIndex(next=>{
         if(next.ignoredFields.some(f=>f.id===fieldKey))return;
@@ -82,16 +87,19 @@ async function handle(m,sender) {
     if(typeof m.title!=='string' || m.title.length>160 || !['draft','paste'].includes(m.kind))throw new Error('Invalid draft.');
     if(!Number.isInteger(m.slot) || m.slot<0 || m.slot>10000)throw new Error('Invalid field position.');
     const key=await digest(origin+pageKey+C.fieldIdentity(f)+m.slot+m.kind);
-    return S.capture({origin,pageKey,fieldKey,key,structure:m.structure,field:f,title:m.title,kind:m.kind,text:m.text,restorable:!url.search && !url.hash && m.kind==='draft' && ['TEXTAREA','INPUT'].includes(f.tag)});
+    return S.capture({origin,pageKey,fieldKey,key,structure:m.structure,field:f,title:m.title,kind:m.kind,text:m.text,restorable:sender.frameId===0 && !m.field.shadow && !url.search && !url.hash && m.kind==='draft' && ['TEXTAREA','INPUT'].includes(f.tag)},policy.maxDays);
   }
   if(!trusted(sender))throw new Error('Unavailable from this context.');
   switch(m.type) {
+    case 'PRACTICE_SAVE':return S.capture({origin:'practice',key:'practice',fieldKey:'practice',pageKey:'practice',structure:'practice',title:'',field:{label:''},kind:'draft',text:m.text,restorable:false},1);
+    case 'PRACTICE_READ':{const state=await S.load(),draft=state.drafts.find(d=>d.origin==='practice');if(!draft)throw new Error('Choose Save practice answer first.');return draft.text;}
+    case 'PRACTICE_CLEAR':await S.updateIndex(s=>{s.drafts=s.drafts.filter(d=>d.key!=='practice');});return true;
     case 'THEME_GET':return {appearance:(await S.publicState()).appearance};
     case 'THEME_SET': {
       if(!['system','light','dark'].includes(m.appearance))throw new Error('Choose system, light or dark appearance.');
       await S.updateIndex(state=>{state.appearance=m.appearance;});await recheckPages();return true;
     }
-    case 'STATE':return {...await S.view(m.origin),lastError:lastError || (await chrome.storage.session.get('lastError')).lastError || ''};
+    case 'STATE':return {...await S.view(m.origin),policy:await managed(),lastError:lastError || (await chrome.storage.session.get('lastError')).lastError || ''};
     case 'ACK_ERROR':lastError='';await chrome.storage.session.remove('lastError');await chrome.action.setBadgeText({text:''});return true;
     case 'ENABLE':{const origin=C.originOf(m.origin);await enable(origin,m.tabId);await chrome.storage.session.remove(`enable-${m.tabId}`);return true;}
     case 'BLOCK_SITE':
@@ -104,6 +112,7 @@ async function handle(m,sender) {
         if(m.type==='BLOCK_SITE' && !state.blockedSites.includes(origin)) {
           if(state.blockedSites.length>=80)throw new Error('Site block limit reached. Remove a blocked site first.');state.blockedSites.push(origin);
         }
+        if(m.erase)delete state.siteDays[origin];
         if(m.erase)state.ignoredFields=state.ignoredFields.filter(f=>f.origin!==origin);
       });
       await stopPages(origin);const state=await S.publicState();await registerSites(state);
@@ -122,8 +131,16 @@ async function handle(m,sender) {
       C.libraryBounded(state);await S.commit(state);return true;
     }
     case 'RETENTION': {
-      if(![1,3,7,14,30].includes(m.days))throw new Error('Choose a supported retention period.');
-      await S.updateIndex(s=>{s.days=m.days;s.drafts=s.drafts.map(d=>({...d,expires:Math.min(d.expires,d.saved+m.days*C.DAY)}));});return true;
+      if(!W.DAYS.includes(m.days))throw new Error('Choose a supported retention period.');
+      const policy=await managed();if(m.days>policy.maxDays)throw new Error('Choose retention within your organization limit.');
+      const origin=m.origin ? C.originOf(m.origin) : '';
+      const before=await S.publicState(),siteDays={...before.siteDays};
+      if(origin){if(!before.sites.includes(origin))throw new Error('Site must be enabled first.');siteDays[origin]=m.days;}
+      const limits=new Map(await Promise.all(Object.entries(siteDays).map(async([o,days])=>[await digest(o),days])));
+      await S.updateIndex(s=>{
+        if(origin)s.siteDays=siteDays;else s.days=m.days;
+        s.drafts=s.drafts.map(d=>({...d,expires:Math.min(d.expires,d.saved+Math.min(limits.get(d.site) || s.days,policy.maxDays)*C.DAY)}));
+      });return true;
     }
     case 'PRIVACY':await S.privacy({metadata:m.metadata,sessionOnly:m.sessionOnly});return true;
     case 'VAULT_ENABLE':if(m.acknowledged!==true)throw new Error('Vault setup requires acknowledging that a forgotten passphrase cannot be recovered.');await S.enableVault(m.passphrase);return true;
@@ -160,9 +177,9 @@ function recordError(safe) {
 }
 async function maintenance() {
   return serial(async()=>{
-    const state=await S.publicState(),sites=[];
-    for(const origin of state.sites)if(!state.blockedSites.includes(origin) && await chrome.permissions.contains({origins:[C.hostPattern(origin)]}))sites.push(origin);
-    await S.updateIndex(s=>{s.sites=sites;});await registerSites(await S.publicState());await finishPending();await recheckPages();
+    const state=await S.publicState(),sites=[],policy=await managed();
+    for(const origin of state.sites)if(policyAllows(policy,origin) && !state.blockedSites.includes(origin) && await chrome.permissions.contains({origins:[C.hostPattern(origin)]}))sites.push(origin);
+    await S.updateIndex(s=>{s.sites=sites;s.drafts=s.drafts.map(d=>({...d,expires:Math.min(d.expires,d.saved+policy.maxDays*C.DAY)}));});await registerSites(await S.publicState());await finishPending();await recheckPages();
     await chrome.alarms.create('retention',{periodInMinutes:60});
   }).catch(()=>recordError('Could not maintain local storage. Keep a separate copy.'));
 }
@@ -170,5 +187,12 @@ chrome.runtime.onInstalled.addListener(maintenance);chrome.runtime.onStartup.add
 chrome.alarms.onAlarm.addListener(a=>{if(a.name==='retention')maintenance();});chrome.permissions.onRemoved.addListener(maintenance);
 chrome.permissions.onAdded.addListener(()=>serial(finishPending).catch(()=>recordError('Could not finish enabling protection. Reopen the popup and try again.')));
 chrome.storage.onChanged.addListener((changes,area)=>{
+  if(area==='managed')maintenance();
   if(area==='session' && Object.entries(changes).some(([name,change])=>name.startsWith('enable-') && change.newValue))serial(finishPending).catch(()=>recordError('Could not finish enabling protection. Reopen the popup and try again.'));
+});
+
+chrome.commands.onCommand.addListener(async command=>{
+  if(command!=='open-library')return;
+  const [tab]=await chrome.tabs.query({active:true,currentWindow:true});
+  if(tab?.id && !tab.incognito)await chrome.tabs.sendMessage(tab.id,{type:'OPEN_LIBRARY'}).catch(()=>{});
 });

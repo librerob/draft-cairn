@@ -51,3 +51,5 @@ $('wipe').onclick=async()=>{
   if(!confirm('Permanently delete ALL extension drafts, library answers, vault keys, settings and site access? Exported files and clipboard history remain.'))return;
   try{await api('CLEAR');await render();notice('All extension data and site access deleted.');}catch(e){notice(e.message,true);}
 };
+
+$('practice').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('practice.html')});
