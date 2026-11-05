@@ -17,6 +17,7 @@ Sources checked 22 October 2026. These are a feature and license review, not a p
 | [Typio Form Recovery Reboot](https://github.com/tsukumijima/typio-form-recovery-reboot) | Automatic form-input history and recovery, including manual selection of a target. | Its [license.txt](https://github.com/tsukumijima/typio-form-recovery-reboot/blob/master/license.txt) uses CC BY-NC-ND 4.0, which restricts commercial use and sharing adaptations. Do not describe that license as open-source software licensing or reuse its code here. |
 | [Form History Control II](https://github.com/stephanmahieu/formhistorycontrol-2) | General form-history viewing, management, and recovery. | [MIT](https://github.com/stephanmahieu/formhistorycontrol-2/blob/master/LICENSE). A direct open-source alternative. No source copied. |
 | [Form Recover](https://formrecover.com/docs/) | Documentation describes immediate across-site capture and local recovery. | No reusable source license was established in the documentation reviewed; treat it as a product reference, not a source-code dependency. Security claims were not independently audited. |
+| [Typeback](https://addons.mozilla.org/en-US/firefox/addon/typeback/) | Advertises rich-editor/web-component recovery and local version history. | Firefox listing declares MIT. Complete public extension source and advertised compatibility were not independently verified; the linked GitHub repository currently contains its website/privacy files. Checked 5 November 2026. |
 | A local document or approved-text folder | Draft outside the portal and manually copy; often already sufficient. | Depends on the chosen editor. This is the strongest low-complexity substitute. |
 
 Draft Cairn's specific deliverable is a deliberately opt-in workflow combining conservative long-answer recovery, selection-aware declared-limit paste interception, and a project-grouped answer library. Exact-origin capture, copy-only uncertain matches, and short default retention make the tradeoff visible. Individual features have precedents; no claim to be the first, unique, safer than every competitor, or universally compatible is warranted.
@@ -44,3 +45,7 @@ Treat the following as preselected decision thresholds, not achieved results:
 - **Stop or pause product investment:** fewer than three return after onboarding, none takes a concrete payment-related step, most are satisfied with document-first drafting, or confidentiality requirements make the approach unacceptable.
 
 Any wrong-field restore, loss caused by the extension, or unexpected sensitive capture blocks expanding deployment until investigated and fixed. The first ten testers provide directional evidence, not proof of market size or recurring revenue.
+
+## Pilot materials
+
+Use the [tester kit](tester-kit.md) for invitations, interview questions and the five-platform worksheet. Materials prepared does not mean participants recruited or demand validated. No outreach, account creation, paid plan or Store submission is performed by preparing these files.

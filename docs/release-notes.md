@@ -1,9 +1,9 @@
-Draft Cairn 0.3.1 — fix the narrow Chrome toolbar popup.
+Draft Cairn 0.4.0 — reuse answers with a fit check and recover supported embedded fields.
 
-The popup now declares its minimum width on the document and no longer caps its body against Chrome's initial viewport. This prevents the narrow column of wrapped text reported in the published extension.
+Choose a library answer in the on-page editor or with Alt+Shift+L, inspect the projected result, then explicitly insert it into a supported ordinary field. Existing text outside your selection stays. Changed destinations cancel insertion and visible results are checked after 1.5 seconds. Rich editors remain copy-only.
 
-The light/dark interface, paste checks, recovery, answer library and encryption behavior are unchanged. No new permissions are added.
+Eligible fields can save in open shadow roots and HTTP/HTTPS frames. Both the containing site and a cross-origin frame must be enabled separately. Frame and shadow recovery is copy-only. Closed roots and opaque frames remain unsupported.
 
-Validation includes the existing unit and Chromium regression suites plus a headed Chromium test opening the actual toolbar popup, rather than a tab with a preset viewport. See docs/validation.md for the exact results and remaining manual checks. The public portal matrix retains its dated 0.3.0 evidence; portal behavior was not changed by this layout fix.
+Added advisory linked website word/character counters, per-site retention, reviewed multi-site access requests, optional organization allowlist/retention limits, selected-answer Markdown snapshots and a local save/reload/recover practice page. Snapshots do not prove submission. No telemetry, network API, mandatory host grant or new API permission is added.
 
-Update the existing Chrome Web Store item using draft-cairn-0.3.1.zip. Its manifest version is higher than 0.3.0. Upload only the install ZIP, not the outer preparation kit. Reload a test website after the update and open the toolbar popup again.
+Read docs/validation.md for exact evidence and remaining manual checks. Public applicant sessions, native host prompts, enterprise deployment and Windows/macOS daily use are not established by synthetic CI. Update the existing Store item with the install ZIP only; review the updated privacy policy and listing before submission.

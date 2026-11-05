@@ -28,7 +28,9 @@ jobs:
       - run: npx playwright install chromium
       - run: npm run test:browser
       - run: node tests/workflows.mjs
+        if: ${{ !cancelled() }}
       - run: xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" node tests/popup.mjs
+        if: ${{ !cancelled() }}
       - run: |
           python3 scripts/package.py
           cp dist/SHA256SUMS /tmp/first-checksum

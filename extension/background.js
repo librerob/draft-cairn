@@ -54,7 +54,7 @@ async function stopPages() { await recheckPages(); }
 async function activeOrigin(sender) {
   if(!sender.tab || sender.tab.incognito || !Number.isInteger(sender.frameId))throw new Error('This page is not supported.');
   const origin=C.originOf(sender.url),state=await S.publicState(),policy=await managed();
-  const top=new URL(sender.tab.url);
+  const top=new URL(sender.frameId===0 ? sender.url : sender.tab.url);
   if(!state.sites.includes(top.origin) || state.blockedSites.includes(top.origin) || !policyAllows(policy,top.origin) || !policyAllows(policy,origin) || !(await chrome.permissions.contains({origins:[C.hostPattern(top.origin)]})))throw new Error('Protection is off for the containing website.');
   if(!state.sites.includes(origin) || state.blockedSites.includes(origin) || !(await chrome.permissions.contains({origins:[C.hostPattern(origin)]})))throw new Error('Protection is off for this site.');
   return {origin,state,url:new URL(sender.url),policy,scope:sender.frameId===0 ? '' : '|frame|'+top.origin+top.pathname+'|'+sender.frameId};
